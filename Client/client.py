@@ -56,11 +56,11 @@ def handleTeamNameRequest(socket):
     socket.sendMsg(team_name)
 
 def handleCodeRequest(socket):
+    print('Code Request')
     socket.sendMsg('Python\n')
     socket.sendFile('./client.py')
     socket.sendMsg('\n')
     socket.sendMsg('...\n')
-    print('Code Request')
 
 def handleReceiveRequest(data):
     lines = data.split('\n')
