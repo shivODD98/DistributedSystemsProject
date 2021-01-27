@@ -1,9 +1,10 @@
 import socket
+import re
 
 Protocol = {
     "Team Name Request": "get team name\n",
     "Code Request": "get code\n",
-    "Receive Request": "receive peers\n"
+    "Receive Request": "receive peers\n",
     "Report Request": "get report\n",
     "Close Request": "close\n"
 }
@@ -46,33 +47,34 @@ def handleTeamNameRequest():
 def handleCodeRequest():
     print('Code Request')
 
-def handleReceiveRequest():
+def handleReceiveRequest(data):
+    lines = data.split('\n')
+    nPeers = lines[1]
     print('Receive Request')
 
 def handleReportRequest():
     print("Report Request")
 
 socket = MySocket()
-socket.connect('192.168.0.23', 55921)
+socket.connect('136.159.5.25', 55921)
 while True:
     data = socket.receive()
     print(data)
     if not data:
         continue
-
-    if data == Protocol["Team Name Request"]:
+    if re.search(data, Protocol["Team Name Request"]):
         handleTeamNameRequest()
 
-    elif data == Protocol["Code Request"]:
+    elif re.search(data, Protocol["Code Request"]):
         handleCodeRequest()
 
-    elif data == Protocol["Receive Request"]:
-        handleReceiveRequest()
+    elif re.search(data, Protocol["Receive Request"]):
+        handleReceiveRequest(data)
 
-    elif data == Protocol["Report Request"]:
+    elif re.search(data, Protocol["Report Request"]):
         handleReportRequest()
 
-    elif data == Protocol["Close Request"]:
+    elif re.search(data, Protocol["Close Request"]):
         print("Close Request")
         socket.close()
         break
