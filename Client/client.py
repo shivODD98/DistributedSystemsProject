@@ -10,7 +10,6 @@ Protocol = {
 
 class MySocket:
     def __init__(self, sock=None):
-        print('init')
         self.FORMAT = 'utf-8'
         if sock is None:
             self.sock = socket.socket(
@@ -28,11 +27,9 @@ class MySocket:
 
     # Sends a string message throught the socket encoded in utf-8
     def send(self, msg):
-        totalsent = 0
         sent = self.sock.send(msg.encode(self.FORMAT))
         if sent == 0:
             raise RuntimeError("socket connection broken")
-        totalsent = totalsent + sent
 
     # Waits to recieve data in the socket and returns it as a string
     def receive(self):
@@ -41,7 +38,20 @@ class MySocket:
             return str(msg)
         else:
             return ''
-        
+
+
+def handleTeamNameRequest():
+    print('Team Name Request')
+
+def handleCodeRequest():
+    print('Code Request')
+
+def handleReceiveRequest():
+    print('Receive Request')
+
+def handleReportRequest():
+    print("Report Request")
+
 socket = MySocket()
 socket.connect('192.168.0.23', 55921)
 while True:
@@ -49,15 +59,20 @@ while True:
     print(data)
     if not data:
         continue
-    if data == 'get id\n':
-        print('get id')
-        socket.send('30031173\n')
-        # break
-    if data == 'get name\n':
-        print('get name')
-        socket.send('Shiv Odedra\n')
-        # break
-    if data == 'close':
-        print('closing socket')
+
+    if data == Protocol["Team Name Request"]:
+        handleTeamNameRequest()
+
+    elif data == Protocol["Code Request"]:
+        handleCodeRequest()
+
+    elif data == Protocol["Receive Request"]:
+        handleReceiveRequest()
+
+    elif data == Protocol["Report Request"]:
+        handleReportRequest()
+
+    elif data == Protocol["Close Request"]:
+        print("Close Request")
         socket.close()
         break
