@@ -1,5 +1,13 @@
 import socket
 
+Protocol = {
+    "Team Name Request": "get team name\n",
+    "Code Request": "get code\n",
+    "Receive Request": "receive peers\n"
+    "Report Request": "get report\n",
+    "Close Request": "close\n"
+}
+
 class MySocket:
     def __init__(self, sock=None):
         print('init')
