@@ -23,6 +23,7 @@ async def writeMsg(writer, msg):
 async def writeFile(writer, file_path):
     source_file = open(file_path, 'rb')
     source_data = source_file.read()
+    source_file.close()
     writer.write(source_data)
     await writer.drain()
 
@@ -45,16 +46,18 @@ async def handleReceiveRequest(reader):
     for _ in range(nPeers):
         peer = (await reader.readuntil(b'\n')).decode(encoding)
         peer = peer.split('\n')[0]
-        Peers.append(peer)
+        if peer not in Peers:
+            Peers.append(peer)
 
     now = datetime.now()
     date = now.strftime("%Y-%m-%d %H:%M:%S")
     address = f'{ip_address}:{port_number}'
-    Sources.append({
-        "Address": address,
-        "Date": date
-    })
-    print(Peers, Sources[0])
+    if not list(filter(lambda source: source['Address'] == address, Sources)):
+        Sources.append({
+            "Address": address,
+            "Date": date
+        })
+    print(Peers, Sources)
 
 
 async def handleReportRequest(writer):
@@ -78,6 +81,7 @@ async def handleReportRequest(writer):
 
 async def client():
     reader, writer = await asyncio.open_connection(ip_address, port_number)
+    print('is connected')
     
     while True:
         data = await reader.readuntil(b'\n')
