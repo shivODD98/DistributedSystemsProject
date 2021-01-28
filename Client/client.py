@@ -1,6 +1,8 @@
-import socket
 import re
+import asyncio
+from datetime import datetime
 
+encoding = 'UTF-8'
 Protocol = {
     "Team Name Request": "get team name\n",
     "Code Request": "get code\n",
@@ -8,88 +10,97 @@ Protocol = {
     "Report Request": "get report\n",
     "Close Request": "close\n"
 }
+Peers = []
+Sources = []
 
-class MySocket:
-    def __init__(self, sock=None):
-        self.FORMAT = 'utf-8'
-        if sock is None:
-            self.sock = socket.socket(
-                            socket.AF_INET, socket.SOCK_STREAM)
-        else:
-            self.sock = sock
+async def writeMsg(writer, msg):
+    writer.write(msg.encode(encoding))
+    await writer.drain()
 
-    # Connects the socket to a host and port
-    def connect(self, host, port):
-        self.sock.connect((host, port))
+async def writeFile(writer, file_path):
+    source_file = open(file_path, 'rb')
+    source_data = source_file.read()
+    writer.write(source_data)
+    await writer.drain()
 
-    # Closes the socket
-    def close(self):
-        self.sock.close()
 
-    # Sends a string message throught the socket encoded in utf-8
-    def sendMsg(self, msg):
-        sent = self.sock.send(msg.encode(self.FORMAT))
-        if sent == 0:
-            raise RuntimeError("socket connection broken")
-        print('msg sent successfully')
 
-    def sendFile(self, file_path):
-        source_file = open(file_path, 'rb')
-        source_data = source_file.read()
-        sent = self.sock.send(source_data)
-        if sent == 0:
-            raise RuntimeError("socket connection broken")
-        source_file.close()
-        print('source_data sent successfully')
-
-    # Waits to recieve data in the socket and returns it as a string
-    def receive(self):
-        msg = self.sock.recv(1024).decode(self.FORMAT) # might have to increase recv chunk size
-        if msg: 
-            return str(msg)
-        else:
-            return ''
-
-def handleTeamNameRequest(socket):
+async def handleTeamNameRequest(writer):
     print('Team Name Request')
     team_name = '2AM Design\n'
-    socket.sendMsg(team_name)
+    await writeMsg(writer, team_name)
 
-def handleCodeRequest(socket):
+async def handleCodeRequest(writer):
     print('Code Request')
-    socket.sendMsg('Python\n')
-    socket.sendFile('./client.py')
-    socket.sendMsg('\n')
-    socket.sendMsg('...\n')
+    await writeMsg(writer, 'Python\n')
+    await writeFile(writer, './client.py')
+    await writeMsg(writer, '\n...\n')
 
-def handleReceiveRequest(data):
-    lines = data.split('\n')
-    nPeers = lines[1]
+async def handleReceiveRequest(reader):
     print('Receive Request')
+    nPeers = (await reader.readuntil(b'\n')).decode(encoding)
+    nPeers = int(nPeers)
 
-def handleReportRequest():
+    for _ in range(nPeers):
+        peer = (await reader.readuntil(b'\n')).decode(encoding)
+        peer = peer.split('\n')[0]
+        Peers.append(peer)
+
+    now = datetime.now()
+    date = now.strftime("%Y-%m-%d %H:%M:%S")
+    address = '136.159.5.25:55921'
+    Sources.append({
+        "Address": address,
+        "Date": date
+    })
+    print(Peers, Sources[0])
+
+
+async def handleReportRequest(writer):
     print("Report Request")
 
-socket = MySocket()
-socket.connect('192.168.0.23', 55921)
-while True:
-    data = socket.receive()
-    print(data)
-    if not data:
-        continue
-    if re.search(data, Protocol["Team Name Request"]):
-        handleTeamNameRequest(socket)
+    await writeMsg(writer, f'{len(Peers)}\n')
+    for peer in Peers:
+        await writeMsg(writer, f'{peer}\n')
 
-    elif re.search(data, Protocol["Code Request"]):
-        handleCodeRequest(socket)
+    await writeMsg(writer, f'{len(Sources)}\n')
 
-    elif re.search(data, Protocol["Receive Request"]):
-        handleReceiveRequest(data)
+    for source in Sources:
+        await writeMsg(writer, f'{source["Address"]}\n')
+        await writeMsg(writer, f'{source["Date"]}\n')
 
-    elif re.search(data, Protocol["Report Request"]):
-        handleReportRequest()
+        await writeMsg(writer, f'{len(Peers)}\n')
+        for peer in Peers:
+            await writeMsg(writer, f'{peer}\n')
+    
 
-    elif re.search(data, Protocol["Close Request"]):
-        print("Close Request")
-        socket.close()
-        break
+
+async def client():
+    reader, writer = await asyncio.open_connection('136.159.5.25', 55921)
+    
+    while True:
+        data = await reader.readuntil(b'\n')
+        data = data.decode(encoding)
+        print(f"data is:{data}")
+        if not data:
+            continue
+        if re.search(data, Protocol["Team Name Request"]):
+            await handleTeamNameRequest(writer)
+
+        elif re.search(data, Protocol["Code Request"]):
+            await handleCodeRequest(writer)
+
+        elif re.search(data, Protocol["Receive Request"]):
+            await handleReceiveRequest(reader)
+
+        if re.search(data, Protocol["Report Request"]):
+            await handleReportRequest(writer)
+
+        if re.search(data, Protocol["Close Request"]):
+            print("Close Request")
+            break
+
+    writer.close()
+
+
+asyncio.run(client())
