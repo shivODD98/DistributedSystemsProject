@@ -2,6 +2,9 @@ import re
 import asyncio
 from datetime import datetime
 
+ip_address = '192.168.1.97'
+port_number = 55921
+
 encoding = 'UTF-8'
 Protocol = {
     "Team Name Request": "get team name\n",
@@ -22,8 +25,6 @@ async def writeFile(writer, file_path):
     source_data = source_file.read()
     writer.write(source_data)
     await writer.drain()
-
-
 
 async def handleTeamNameRequest(writer):
     print('Team Name Request')
@@ -48,7 +49,7 @@ async def handleReceiveRequest(reader):
 
     now = datetime.now()
     date = now.strftime("%Y-%m-%d %H:%M:%S")
-    address = '136.159.5.25:55921'
+    address = f'{ip_address}:{port_number}'
     Sources.append({
         "Address": address,
         "Date": date
@@ -76,7 +77,7 @@ async def handleReportRequest(writer):
 
 
 async def client():
-    reader, writer = await asyncio.open_connection('136.159.5.25', 55921)
+    reader, writer = await asyncio.open_connection(ip_address, port_number)
     
     while True:
         data = await reader.readuntil(b'\n')
