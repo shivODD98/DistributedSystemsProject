@@ -1,8 +1,17 @@
+package registry;
+
 import java.io.IOException;
 import java.net.BindException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.util.Collection;
 import java.util.Random;
+import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -24,14 +33,16 @@ public class Registry {
 	/** If no port number is provided when running the registry, this port number will be used. */
 	public static final int DEFAULT_PORT_NUMBER = 55921;
 
-	protected final static Logger LOGGER = Logger.getLogger(Registry.class.getName());
+	private final static Logger LOGGER = Logger.getLogger(Registry.class.getName());
 	
 	/** Contains the peers we know about: no duplicates allowed */
 	private ConcurrentHashMap<String, Peer> peers = new ConcurrentHashMap<String, Peer>();
 	
 	/** Port number used by this registry */
-	protected int portNumber;
-	
+	private int portNumber;
+
+	boolean done = false;
+
 	/**
 	 * Create registry to run at specified port number	
 	 * @param aPortNumber port number to attempt running this registry at.
@@ -52,11 +63,15 @@ public class Registry {
 	 */
 	public void start() throws IOException {
 		ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+		
+		// This thread will look for command line input: right now the only command is 'done'
+		createCommandLineThread();
 		try {
 			ServerSocket server = new ServerSocket(portNumber);
 			LOGGER.log(Level.INFO, "Server started at " + 
 					server.getInetAddress().getLocalHost().getHostAddress() +
 					":" + portNumber);
+			//while (!done) {
 			while (true) {
 				Socket sock = server.accept();
 				LOGGER.log(Level.INFO, "Connection accepted with " + sock.getRemoteSocketAddress());
@@ -69,6 +84,62 @@ public class Registry {
 		executor.shutdown();
 	}
 	
+	/*------------------------- updated code ----------------------------------------------*/
+	
+	/**
+	 * Creates a thread that monitors for input from the command line.  Right now, we are only
+	 * interested in the command 'done' that indicates we should start the process of shutting the
+	 * entire system down.
+	 * <p>
+	 * It will only let all peers in the system know to shut down.  The actually shutting down of this 
+	 * server will still have to be done manually.
+	 */
+	private void createCommandLineThread() {
+		Thread t = new Thread(new Runnable() {
+			@Override
+			public void run() {
+				Scanner keyboard = new Scanner(System.in);
+				while (!done) {
+					String command = keyboard.nextLine();
+					if (command.equalsIgnoreCase("done")) {
+						done();
+					}
+				}
+			}
+			
+		});
+		t.start();
+	}
+	
+	/**
+	 * Flag that we are in the shutdown phase.  Well send a UDP message to each peer to let them know
+	 * to end their work and re-connect with the registry to submit a final report.
+	 */
+	private void done() {
+		done = true;
+		// Let all processes we know about that we're done and that they should shut down.
+		// TODO: create multiple threads so we can communicate with multiple peers simultaneously
+		Collection<Peer> knownPeers = peers.values();
+		try {
+			DatagramSocket udpServer = new DatagramSocket();
+			byte[] msg = "stop".getBytes();
+			for (Peer p : knownPeers) {
+				try {
+					DatagramPacket packet = new DatagramPacket(msg, msg.length, InetAddress.getByName(p.address), p.port);
+					udpServer.send(packet);
+					System.out.println("Sent 'stop' to " + p);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			udpServer.close();
+		} catch (SocketException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+	}
+	
+	/*----------------------------------- end of updated code --------------------------------------*/
 
 	/** 
 	 * Place the specified in the list of know peers.  If this peer already exists, the 

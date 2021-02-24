@@ -1,3 +1,4 @@
+package registry;
 public class Peer {
 	String address;
 	int port;
