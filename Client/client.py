@@ -28,35 +28,46 @@ Protocol = {
 Peers = []
 Sources = []
 
-async def writeMsg(writer, msg):
-    writer.write(msg.encode(encoding))
-    await writer.drain()
 
-async def writeFile(writer, file_path):
-    source_file = open(file_path, 'rb')
-    source_data = source_file.read()
-    source_file.close()
-    writer.write(source_data)
-    await writer.drain()
+class GroupCommunicator:
 
-async def handleTeamNameRequest(writer):
+    def __init__(self):
+        self.reader, self.writer = ''
+
+    async def writeMsg(self, msg):
+        self.writer.write(msg.encode(encoding))
+        await self.writer.drain()
+
+    async def writeFile(self, file_path):
+        source_file = open(file_path, 'rb')
+        source_data = source_file.read()
+        source_file.close()
+        self.writer.write(source_data)
+        await self.writer.drain()
+
+    def closeWriter(self):
+        self.writer.close
+
+
+async def handleTeamNameRequest(communicator):
     print('Team Name Request')
     team_name = '2AM Design\n'
-    await writeMsg(writer, team_name)
+    await communicator.writeMsg(team_name)
 
-async def handleCodeRequest(writer):
+async def handleCodeRequest(communicator):
     print('Code Request')
-    await writeMsg(writer, 'Python\n')
-    await writeFile(writer, './client.py')
-    await writeMsg(writer, '\n...\n')
+    await communicator.writeMsg('Python\n')
+    await communicator.writeFile('./client.py')
+    await communicator.writeMsg('\n...\n')
 
-async def handleReceiveRequest(reader):
+
+async def handleReceiveRequest(communicator):
     print('Receive Request')
-    nPeers = (await reader.readuntil(b'\n')).decode(encoding)
+    nPeers = (await communicator.reader.readuntil(b'\n')).decode(encoding)
     nPeers = int(nPeers)
 
     for _ in range(nPeers):
-        peer = (await reader.readuntil(b'\n')).decode(encoding)
+        peer = (await communicator.reader.readuntil(b'\n')).decode(encoding)
         peer = peer.split('\n')[0]
         if peer not in Peers:
             Peers.append(peer)
@@ -74,49 +85,48 @@ async def handleReceiveRequest(reader):
 async def handleReportRequest(writer):
     print("Report Request")
 
-    await writeMsg(writer, f'{len(Peers)}\n')
+    await communicator.writeMsg(f'{len(Peers)}\n')
     for peer in Peers:
-        await writeMsg(writer, f'{peer}\n')
+        await communicator.writeMsg(f'{peer}\n')
 
-    await writeMsg(writer, f'{len(Sources)}\n')
+    await communicator.writeMsg(f'{len(Sources)}\n')
 
     for source in Sources:
-        await writeMsg(writer, f'{source["Address"]}\n')
-        await writeMsg(writer, f'{source["Date"]}\n')
+        await communicator.writeMsg(f'{source["Address"]}\n')
+        await communicator.writeMsg(f'{source["Date"]}\n')
 
-        await writeMsg(writer, f'{len(Peers)}\n')
+        await communicator.writeMsg(f'{len(Peers)}\n')
         for peer in Peers:
-            await writeMsg(writer, f'{peer}\n')
-    
-
+            await communicator.writeMsg(f'{peer}\n')
 
 async def client():
-    reader, writer = await asyncio.open_connection(ip_address, port_number)
+    communicator = GroupCommunicator()
+    communicator.reader, communicator.writer = await asyncio.open_connection(ip_address, port_number)
     print('is connected')
     
     while True:
-        data = await reader.readuntil(b'\n')
+        data = await communicator.reader.readuntil(b'\n')
         data = data.decode(encoding)
         print(f"data is:{data}")
         if not data:
             continue
         if re.search(data, Protocol["Team Name Request"]):
-            await handleTeamNameRequest(writer)
+            await handleTeamNameRequest(communicator)
 
         elif re.search(data, Protocol["Code Request"]):
-            await handleCodeRequest(writer)
+            await handleCodeRequest(communicator)
 
         elif re.search(data, Protocol["Receive Request"]):
-            await handleReceiveRequest(reader)
+            await handleReceiveRequest(communicator)
 
         if re.search(data, Protocol["Report Request"]):
-            await handleReportRequest(writer)
+            await handleReportRequest(communicator)
 
         if re.search(data, Protocol["Close Request"]):
             print("Close Request")
             break
 
-    writer.close()
+    communicator.closeWriter()
 
 
 asyncio.run(client())
