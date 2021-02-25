@@ -2,6 +2,18 @@ import re
 import asyncio
 from datetime import datetime
 
+class Process:
+
+    def __init__(self, registry_ip, registry_port, encoding = 'UTF-8'):
+        self.registry_ip = registry_ip
+        self.registry_port = registry_port
+        self.encoding = encoding
+
+
+process = Process('10.58.192.238', 55921)
+
+# Old
+
 ip_address = '192.168.1.97'
 port_number = 55921
 
@@ -58,7 +70,6 @@ async def handleReceiveRequest(reader):
             "Date": date
         })
     print(Peers, Sources)
-
 
 async def handleReportRequest(writer):
     print("Report Request")
