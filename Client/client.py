@@ -48,6 +48,7 @@ class Process:
         self.encoding = encoding
         self.communicator = ChannelCommunicator()
         self.group_manager = GroupManager()
+        self.groupCommunicator = GroupCommunicator()
 
     async def handleTeamNameRequest(self):
         print('Team Name Request')
@@ -103,6 +104,10 @@ class Process:
                 await communicator.writeMsg(f'{peer}\n')
 
     async def run(self):
+        # Initalize UDP server first to get location
+        address = self.groupCommunicator.initalize()
+        print(f"UDP server initalized on {address}")
+        
         self.communicator.reader, self.communicator.writer = await asyncio.open_connection(self.registry_ip, self.registry_port)
         print('is connected')
         
@@ -130,15 +135,19 @@ class Process:
             elif re.search(data, self.Protocol["Close Request"]):
                 print("Close Request")
                 break
+        self.communicator.closeWriter()
 
-        communicator.closeWriter()
+        self.groupCommunicator.start()
 
     def start(self):
         asyncio.run(self.run())
 
-process = Process('136.159.5.22', 55921)
+
+
+process = Process('10.0.0.187', 55921)
 process.start()
 
+#OLD
 Peers = []
 Sources = []
 
