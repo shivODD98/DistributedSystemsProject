@@ -1,18 +1,16 @@
+import socket
+
 class GroupCommunicator:
 
-    def __init__(self):
-        self.reader, self.writer = ''
+    def __init__(self, server_ip, server_port):
+        self.server_ip = server_ip
+        self.server_port = server_port
+        self.socket = socket.socker(socket.AF_INET, socket.SOCK_DGRAM)
 
-    async def writeMsg(self, msg):
-        self.writer.write(msg.encode('UTF-8'))
-        await self.writer.drain()
+    def start(self):
+        self.socket.bind((self.server_ip, self.server_port))
 
-    async def writeFile(self, file_path):
-        source_file = open(file_path, 'rb')
-        source_data = source_file.read()
-        source_file.close()
-        self.writer.write(source_data)
-        await self.writer.drain()
+        while True:
+            data,addr = sock.recvfrom(1024)
+            print(f"received message: {data} from: {addr}")
 
-    def closeWriter(self):
-        self.writer.close

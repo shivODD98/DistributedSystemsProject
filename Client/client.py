@@ -2,6 +2,7 @@ import re
 import asyncio
 from datetime import datetime
 from GroupManager import GroupManager
+from Communicator.GroupCommunicator import GroupCommunicator
 
 # Helper class for communicating through a channel
 class ChannelCommunicator:
@@ -131,7 +132,6 @@ class Process:
                 break
 
         communicator.closeWriter()
-
 
     def start(self):
         asyncio.run(self.run())
