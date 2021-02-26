@@ -1,29 +1,23 @@
 import re
 import asyncio
 from datetime import datetime
+from GroupManager import GroupManager
+from Communicator.GroupCommunicator import GroupCommunicator
 
-ip_address = '192.168.1.97'
-port_number = 55921
+# Helper class for communicating through a channel
+class ChannelCommunicator:
 
-encoding = 'UTF-8'
-Protocol = {
-    "Team Name Request": "get team name\n",
-    "Code Request": "get code\n",
-    "Receive Request": "receive peers\n",
-    "Report Request": "get report\n",
-    "Close Request": "close\n"
-}
-Peers = []
-Sources = []
+    def __init__(self, encoding = 'UTF-8'):
+        self.reader = ''
+        self.writer = ''
+        self.encoding = encoding
 
-
-class GroupCommunicator:
-
-    def __init__(self):
-        self.reader, self.writer = ''
+    async def readLine(self):
+        data = await self.reader.readuntil(b'\n')
+        return data.decode(self.encoding)
 
     async def writeMsg(self, msg):
-        self.writer.write(msg.encode(encoding))
+        self.writer.write(msg.encode(self.encoding))
         await self.writer.drain()
 
     async def writeFile(self, file_path):
@@ -34,88 +28,126 @@ class GroupCommunicator:
         await self.writer.drain()
 
     def closeWriter(self):
-        self.writer.close
+        self.writer.close()
 
 
-async def handleTeamNameRequest(communicator):
-    print('Team Name Request')
-    team_name = '2AM Design\n'
-    await communicator.writeMsg(team_name)
+class Process:
 
-async def handleCodeRequest(communicator):
-    print('Code Request')
-    await communicator.writeMsg('Python\n')
-    await communicator.writeFile('./client.py')
-    await communicator.writeMsg('\n...\n')
+    Protocol = {
+        "Team Name Request": "get team name\n",
+        "Get Location Request": "get location\n",
+        "Code Request": "get code\n",
+        "Receive Request": "receive peers\n",
+        "Report Request": "get report\n",
+        "Close Request": "close\n"
+    }
 
+    def __init__(self, registry_ip, registry_port, encoding = 'UTF-8'):
+        self.registry_ip = registry_ip
+        self.registry_port = registry_port
+        self.encoding = encoding
+        self.communicator = ChannelCommunicator()
+        self.group_manager = GroupManager()
+        self.groupCommunicator = GroupCommunicator()
 
-async def handleReceiveRequest(communicator):
-    print('Receive Request')
-    nPeers = (await communicator.reader.readuntil(b'\n')).decode(encoding)
-    nPeers = int(nPeers)
+    async def handleTeamNameRequest(self):
+        print('Team Name Request')
+        team_name = '2AM Design\n'
+        await self.communicator.writeMsg(team_name)
 
-    for _ in range(nPeers):
-        peer = (await communicator.reader.readuntil(b'\n')).decode(encoding)
-        peer = peer.split('\n')[0]
-        if peer not in Peers:
-            Peers.append(peer)
+    async def handleLocationRequest(self, udp_address):
+        print('Location Request')
+        location = f'{udp_address[0]}:{udp_address[1]}\n'
+        await self.communicator.writeMsg(location)
 
-    now = datetime.now()
-    date = now.strftime("%Y-%m-%d %H:%M:%S")
-    address = f'{ip_address}:{port_number}'
-    if not list(filter(lambda source: source['Address'] == address, Sources)):
-        Sources.append({
-            "Address": address,
-            "Date": date
-        })
-    print(Peers, Sources)
+    async def handleCodeRequest(self):
+        print('Code Request')
+        await self.communicator.writeMsg('py\n')
+        await self.communicator.writeFile('./Client/client.py')
+        await self.communicator.writeMsg('\n...\n')
 
+    async def handleReceiveRequest(self):
+        print('Receive Request')
+        nPeers = await self.communicator.readLine()
+        nPeers = int(nPeers)
 
-async def handleReportRequest(communicator):
-    print("Report Request")
+        for _ in range(nPeers):
+            peer = await self.communicator.readLine()
+            peer = peer.split('\n')[0]
+            self.group_manager.add(peer)
 
-    await communicator.writeMsg(f'{len(Peers)}\n')
-    for peer in Peers:
-        await communicator.writeMsg(f'{peer}\n')
+        # now = datetime.now()
+        # date = now.strftime("%Y-%m-%d %H:%M:%S")
+        # address = f'{ip_address}:{port_number}'
+        # if not list(filter(lambda source: source['Address'] == address, Sources)):
+        #     Sources.append({
+        #         "Address": address,
+        #         "Date": date
+        #     })
+        print(self.group_manager.get_peers())
 
-    await communicator.writeMsg(f'{len(Sources)}\n')
-
-    for source in Sources:
-        await communicator.writeMsg(f'{source["Address"]}\n')
-        await communicator.writeMsg(f'{source["Date"]}\n')
+    async def handleReportRequest(self):
+        print("Report Request")
 
         await communicator.writeMsg(f'{len(Peers)}\n')
         for peer in Peers:
             await communicator.writeMsg(f'{peer}\n')
 
-async def client():
-    communicator = GroupCommunicator()
-    communicator.reader, communicator.writer = await asyncio.open_connection(ip_address, port_number)
-    print('is connected')
-    
-    while True:
-        data = await communicator.reader.readuntil(b'\n')
-        data = data.decode(encoding)
-        print(f"data is:{data}")
-        if not data:
-            continue
-        if re.search(data, Protocol["Team Name Request"]):
-            await handleTeamNameRequest(communicator)
+        await communicator.writeMsg(f'{len(Sources)}\n')
 
-        elif re.search(data, Protocol["Code Request"]):
-            await handleCodeRequest(communicator)
+        for source in Sources:
+            await communicator.writeMsg(f'{source["Address"]}\n')
+            await communicator.writeMsg(f'{source["Date"]}\n')
 
-        elif re.search(data, Protocol["Receive Request"]):
-            await handleReceiveRequest(communicator)
+            await communicator.writeMsg(f'{len(Peers)}\n')
+            for peer in Peers:
+                await communicator.writeMsg(f'{peer}\n')
 
-        if re.search(data, Protocol["Report Request"]):
-            await handleReportRequest(communicator)
+    async def run(self):
+        # Initalize UDP server first to get location
+        udp_address = self.groupCommunicator.initalize()
+        print(f"UDP server initalized on {udp_address}")
+        
+        self.communicator.reader, self.communicator.writer = await asyncio.open_connection(self.registry_ip, self.registry_port)
+        print('is connected')
+        
+        while True:
+            data = await self.communicator.readLine()
 
-        if re.search(data, Protocol["Close Request"]):
-            print("Close Request")
-            break
+            print(f"data is:{data}")
+            if not data:
+                continue
+            elif re.search(data, self.Protocol["Team Name Request"]):
+                await self.handleTeamNameRequest()
+            
+            elif (re.search(data, self.Protocol["Get Location Request"])):
+                await self.handleLocationRequest(udp_address)
 
-    communicator.closeWriter()
+            elif re.search(data, self.Protocol["Code Request"]):
+                await self.handleCodeRequest()
+
+            elif re.search(data, self.Protocol["Receive Request"]):
+                await self.handleReceiveRequest()
+
+            # elif re.search(data, self.Protocol["Report Request"]):
+            #     await handleReportRequest(communicator)
+
+            elif re.search(data, self.Protocol["Close Request"]):
+                print("Close Request")
+                break
+        self.communicator.closeWriter()
+
+        self.groupCommunicator.start()
+
+    def start(self):
+        asyncio.run(self.run())
 
 
-asyncio.run(client())
+
+process = Process('10.0.0.187', 55921)
+process.start()
+
+#OLD
+Peers = []
+Sources = []
+
