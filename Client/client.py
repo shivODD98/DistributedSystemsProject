@@ -55,9 +55,9 @@ class Process:
         team_name = '2AM Design\n'
         await self.communicator.writeMsg(team_name)
 
-    async def handleLocationRequest(self):
+    async def handleLocationRequest(self, udp_address):
         print('Location Request')
-        location = '10.58.192.238:65231\n'
+        location = f'{udp_address[0]}:{udp_address[1]}\n'
         await self.communicator.writeMsg(location)
 
     async def handleCodeRequest(self):
@@ -105,8 +105,8 @@ class Process:
 
     async def run(self):
         # Initalize UDP server first to get location
-        address = self.groupCommunicator.initalize()
-        print(f"UDP server initalized on {address}")
+        udp_address = self.groupCommunicator.initalize()
+        print(f"UDP server initalized on {udp_address}")
         
         self.communicator.reader, self.communicator.writer = await asyncio.open_connection(self.registry_ip, self.registry_port)
         print('is connected')
@@ -121,7 +121,7 @@ class Process:
                 await self.handleTeamNameRequest()
             
             elif (re.search(data, self.Protocol["Get Location Request"])):
-                await self.handleLocationRequest()
+                await self.handleLocationRequest(udp_address)
 
             elif re.search(data, self.Protocol["Code Request"]):
                 await self.handleCodeRequest()
