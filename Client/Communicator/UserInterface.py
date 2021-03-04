@@ -10,13 +10,13 @@ class UserInterface:
         """ Updates list of peers """
         self.__peers = peers
 
-
     def sendUserMsg(self, msg):
         """ Sends a new user message to all connected peers (Thread safe)"""
         self.__message_list.append(msg)
     
     def getUsersMsg(self):
         """ gets and waits for user input to console """
+        # https: // stackoverflow.com/questions/70797/how-to-prompt-for-user-input-and-read-command-line-arguments
         self.__message_list.append('')
 
     def add(self, msg):
