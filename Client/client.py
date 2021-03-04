@@ -1,5 +1,6 @@
 import re
 import asyncio
+import threading
 from datetime import datetime
 from GroupManager import GroupManager
 from Communicator.GroupCommunicator import GroupCommunicator
@@ -103,6 +104,9 @@ class Process:
             for peer in Peers:
                 await communicator.writeMsg(f'{peer}\n')
 
+    def startGroupCommunicator(self):
+        self.groupCommunicator.start()
+        
     async def run(self):
         # Initalize UDP server first to get location
         udp_address = self.groupCommunicator.initalize()
@@ -137,7 +141,11 @@ class Process:
                 break
         self.communicator.closeWriter()
 
-        self.groupCommunicator.start()
+        # start group communicator on new thread (maybe pass group manager into it?)
+        t = threading.Thread(target=self.startGroupCommunicator)
+        t.start()
+        t.join()
+        print("back to main client")
 
     def start(self):
         asyncio.run(self.run())
