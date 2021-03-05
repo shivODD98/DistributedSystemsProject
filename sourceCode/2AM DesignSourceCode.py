@@ -1,4 +1,4 @@
-Thu Mar 04 22:13:11 MST 2021
+Thu Mar 04 23:42:41 MST 2021
 py
 import re
 import asyncio
@@ -73,6 +73,12 @@ class Process:
         print('Code Request')
         await self.communicator.writeMsg('py\n')
         await self.communicator.writeFile('./Client/client.py')
+        await self.communicator.writeFile('./Client/GroupManager.py')
+        await self.communicator.writeFile('./Client/Communicator/GroupCommunicator.py')
+        await self.communicator.writeFile('./Client/Communicator/LogicalClock.py')
+        await self.communicator.writeFile('./Client/Communicator/PeerManagementThread.py')
+        await self.communicator.writeFile('./Client/Communicator/SnipManagementThread.py')
+        await self.communicator.writeFile('./Client/Communicator/SnipManager.py')
         await self.communicator.writeMsg('\n...\n')
 
     async def handleReceiveRequest(self):
@@ -169,9 +175,296 @@ class Process:
 process = Process('192.168.1.89', 55921)
 process.start()
 
-#OLD
-Peers = []
-Sources = []
-# python client/client.py
 
+from threading import Lock
+import threading
+from datetime import datetime
+import sys
+
+class Peer:
+    def __init__(self, peer, senderAddress):
+        self.peer = peer
+        self.senderAddress = senderAddress
+        self.timer = threading.Timer(120.0, self.setNotActive).start()
+        self.isActive = 1
+        self.timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+    def setNotActive(self):
+        self.isActive = ''
+
+    def resetTimer(self):
+        if self.timer:
+            self.timer.cancel()
+        self.timer = threading.Timer(60.0, self.setNotActive).start()
+
+class GroupManager:
+
+    def __init__(self):
+        self.__list = [] # A dictionary to avoid duplicates
+        self.mutex = Lock()
+    
+    def add(self, peerAddress, addr=''):
+        """ Adds a new unique peer to the list (Thread safe)"""
+
+        for i in range(len(self.__list)):
+            if self.__list[i].peer == peerAddress:
+                self.__list[i].resetTimer()
+                return
+        
+        peer = Peer(peerAddress, addr)
+        self.mutex.acquire()
+        self.__list.append(peer)
+        self.mutex.release()
+
+    # def remove(self, peer):
+    #     """ Removes a peer from the list if it exists(Thread safe)"""
+    #     self.mutex.acquire()
+    #     self.__list.pop(peer, None)
+    #     self.mutex.release()
+
+    def get_peers(self):
+        """ Get a list of all connected peers """
+        return self.__list
+import re
+import socket
+import time
+from Communicator.SnipManagementThread import SnipManagementThread
+from Communicator.PeerManagementThread import PeerManagementThread
+from Communicator.SnipManager import SnipManager
+
+class GroupCommunicator:
+
+    def __init__(self, group_manager, snipManager):
+        # self.server_ip = server_ip
+        # self.server_port = server_port
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.group_manager = group_manager
+        self.snipManager = snipManager
+        self.isAlive = 1
+        self.threads = []
+
+    def initalize(self, queueLength = 10):
+        # Start a socket server to listen on a free port that is to be determined
+        self.socket.bind((socket.gethostname(), 0))
+
+        return self.socket.getsockname()
+
+    # TODO: need to make this on a new thread because it completly hangs the console
+    def start(self):
+
+        print("UDP server is starting...")
+        peerManagementWThread = PeerManagementThread(1, self.group_manager, 10)
+        snipManagementWThread = SnipManagementThread(2, self.group_manager, self.snipManager)
+
+        peerManagementWThread.start()
+        snipManagementWThread.start()
+
+        self.threads.append(peerManagementWThread)
+        self.threads.append(snipManagementWThread)
+
+        # time.sleep(30)
+        # self.killThreads(threads)
+        # self.kill()
+
+        # Need to send self close message to interput recv from call
+        while self.isAlive:
+            if self.isAlive:
+                data,addr = self.socket.recvfrom(1024)
+                data = data.decode('utf-8')
+                print(f"received message: {data} from: {addr}\n\n")
+
+                if not data:
+                    continue
+                elif 'stop' in data:
+                    print(f'stop {data}')
+                    self.kill()
+
+                elif 'snip' in data:
+                    print(f'snip {data}')
+                    snipData = data.split('snip')[1].split(' ')
+                    print(snipData[0], snipData[1])
+                    self.snipManager.add(data[6:], snipData[0], addr)
+
+                elif 'peer' in data:
+                    print(f'peer {data}')
+                    peerData = data[4:]
+                    print(peerData)
+                    self.group_manager.add(peerData, addr)
+
+                elif 'kill' in data:
+                    print(f'kill {data}')
+                    self.socket.close()
+                    break
+
+    def kill(self):
+        print('killing gc and threads')
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.sendto(
+            bytes('kill', "utf-8"), self.socket.getsockname())
+        sock.close()
+        self.killThreads()
+        self.isAlive = ''
+    
+    def killThreads(self):
+        for t in self.threads:
+            t.kill()
+            t.join()
+
+
+
+import sys
+
+
+class LogicalClock:
+
+    def __init__(self):
+        self.counter = 0
+
+    def increment(self):
+        """ Increments Logical Clock by one"""
+        self.counter = self.counter + 1
+
+    def updateToValue(self, val):
+        """ Update Logical Clocks counter to specific value """
+        self.counter = val
+
+    def getCounterValue(self):
+        """ Get the logical clocks ounter value """
+        return self.counter
+import socket
+import random
+import time
+import threading
+import sys
+
+class PeerManagementThread(threading.Thread):
+
+    def __init__(self, threadId, group_manager, interval):
+        threading.Thread.__init__(self)
+        self.threadId = threadId
+        self.group_manager = group_manager
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.interval = interval
+        self.isAlive = 1
+
+    def run(self):
+        print("Starting " + self.name)
+        while self.isAlive:
+            time.sleep(self.interval)
+            self.sendPeerMsg()
+    
+    def sendPeerMsg(self):
+        peers = self.group_manager.get_peers()
+        peerInfo = peers[random.randint(0, (len(peers)-1))].peer
+        for peer in peers:
+            if peer.isActive:
+            # print('sending message to ' + peer)
+                msg = f'peer{peerInfo}'
+                sendToAdressInfo = peer.peer.split(':')
+                if self.isAlive:
+                    self.socket.sendto(
+                        bytes(msg, "utf-8"), (f'{sendToAdressInfo[0]}', int(sendToAdressInfo[1])))
+
+    def kill(self):
+        print('killing ' + self.name)
+        self.isAlive = ''
+        self.socket.close()
+
+    
+
+import socket
+import time
+from datetime import datetime
+import threading
+import sys
+
+class SnipManagementThread(threading.Thread):
+
+    def __init__(self, threadId, group_manager, snipManager):
+        threading.Thread.__init__(self)
+        self.threadId = threadId
+        self.group_manager = group_manager
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.snipManager = snipManager
+        self.isAlive = 1
+
+    def run(self):
+        print("Starting " + self.name)
+        while self.isAlive:
+            # msg = input("> ") # need to stop this in shutdown process
+            msgs = list(map(str, input(">").split()))
+            print(msgs)
+            msg = ''
+            for ms in msgs:
+                msg += ms + ' '
+            print(msg)
+            if msg == 'exit':
+                break
+            if self.isAlive:
+                self.broadcastSnip(msg)
+    
+    def broadcastSnip(self, msg):
+        peers = self.group_manager.get_peers()
+
+        self.snipManager.clock.increment
+        for peer in peers:
+            print('sending message to ' + peer.peer)
+            sendToAdressInfo = peer.peer.split(':')
+            snipMsg = f'snip{self.snipManager.clock.getCounterValue()} {msg}'
+            if self.isAlive:
+                self.socket.sendto(
+                    bytes(snipMsg, "utf-8"), (f'{sendToAdressInfo[0]}', int(sendToAdressInfo[1])))
+
+    def kill(self):
+        print('killing ' + self.name)
+        self.isAlive = ''
+        self.socket.close()
+import sys
+from Communicator.LogicalClock import LogicalClock
+from datetime import datetime
+
+class Snip:
+
+    def __init__(self, msg, timestamp, sender):
+        self.snip_msg = msg
+        self.timestamp = timestamp
+        self.sender = sender
+        self.date = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+class SnipManager:
+
+    def __init__(self):
+        self.clock = LogicalClock()
+        self.__message_list = []
+
+    # def sendUserMsg(self, msg):
+    #     """ Sends a new user message to all connected peers (Thread safe)"""
+    #     self.__message_list.append(msg)
+    
+    # def getUsersMsg(self):
+    #     """ gets and waits for user input to console """
+    #     # https: // stackoverflow.com/questions/70797/how-to-prompt-for-user-input-and-read-command-line-arguments
+    #     self.__message_list.append('')
+
+    def add(self, msg, timestamp, sender):
+        """ Adds a new message to the list (Thread safe)"""
+        self.clock.updateToValue(max(self.clock.getCounterValue(), int(timestamp)))
+        print(msg)
+        snip = Snip(msg, timestamp, sender)
+        self.__message_list.append(snip)
+        self.clock.increment()
+        self.print_msgs()
+
+    def get_msgs(self):
+        """ Get a list of all messages sent and recieved in order """
+        return self.__message_list.copy()
+
+    def print_msgs(self):
+        print('\n\n')
+        print('Timestamp:   |   Message:\n')
+        for msg in self.__message_list:
+            print('--------------------------\n')
+            print(f'{msg.timestamp}             {msg.snip_msg}')
+            print('--------------------------\n')
+        print('\n\n')
 

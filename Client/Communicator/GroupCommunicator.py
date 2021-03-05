@@ -56,7 +56,7 @@ class GroupCommunicator:
                     print(f'snip {data}')
                     snipData = data.split('snip')[1].split(' ')
                     print(snipData[0], snipData[1])
-                    self.snipManager.add(snipData[1], snipData[0], addr)
+                    self.snipManager.add(data[6:], snipData[0], addr)
 
                 elif 'peer' in data:
                     print(f'peer {data}')

@@ -8,7 +8,7 @@ class Snip:
         self.snip_msg = msg
         self.timestamp = timestamp
         self.sender = sender
-        self.timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        self.date = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
 class SnipManager:
 
@@ -28,6 +28,7 @@ class SnipManager:
     def add(self, msg, timestamp, sender):
         """ Adds a new message to the list (Thread safe)"""
         self.clock.updateToValue(max(self.clock.getCounterValue(), int(timestamp)))
+        print(msg)
         snip = Snip(msg, timestamp, sender)
         self.__message_list.append(snip)
         self.clock.increment()
