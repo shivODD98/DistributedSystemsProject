@@ -8,10 +8,11 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -33,6 +34,17 @@ public class Registry {
 	/** If no port number is provided when running the registry, this port number will be used. */
 	public static final int DEFAULT_PORT_NUMBER = 55921;
 
+	/** Length of time to run the system and accept new peer connections before shutting
+	 * the system down and wait for reports from peers in the system.  Note that the time
+	 * we spend waiting for reports will reduce the time we run the system.
+	 */
+	public static final int MINUTES_TO_RUN_SYSTEM = 10;
+	
+	/** Length of time to wait for connection from peers after shut down message was multicast.
+	 * This connection is to communicate with peers and get their reports.
+	 */
+	public static final int MINUTES_TO_WAIT_FOR_REPORT = 2;
+	
 	private final static Logger LOGGER = Logger.getLogger(Registry.class.getName());
 	
 	/** Contains the peers we know about: no duplicates allowed */
@@ -41,6 +53,7 @@ public class Registry {
 	/** Port number used by this registry */
 	private int portNumber;
 
+	/** Indicates if we are done and in shut-down mode */
 	boolean done = false;
 
 	/**
@@ -59,13 +72,15 @@ public class Registry {
 	 * connection request, a RequestProcessor object is created and provided to the
 	 * thread pool.
 	 * @throws IOException if there are problems starting this registry server or if there
-	 * are problems communication alonger a connection with a peer.
+	 * are problems communication along a connection with a peer.
 	 */
 	public void start() throws IOException {
 		ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 		
 		// This thread will look for command line input: right now the only command is 'done'
 		createCommandLineThread();
+		// Shuts-down and restarts the system on a timer.
+		createTimerThread();
 		try {
 			ServerSocket server = new ServerSocket(portNumber);
 			LOGGER.log(Level.INFO, "Server started at " + 
@@ -109,6 +124,31 @@ public class Registry {
 			
 		});
 		t.start();
+	}
+	
+	/**
+	 * Keeps track of timers to shut system down and then restart after sufficient time has
+	 * passed to get all reports from peers.  The amount of time the system will run and that the 
+	 * system will wait for reports is in the constants MINUTES_TO_RUN_SYSTEM and MINUTES_TO_WAIT_FOR_REPORT.
+	 */
+	private void createTimerThread() {
+		//Timer object allows us to set a timer.  Timers are in milliseconds.
+		Timer timer = new Timer();
+		// This outer time runs for the length of time that the system should run.
+		timer.schedule(new TimerTask() {
+			public void run() {
+				LOGGER.log(Level.INFO, "closing system");
+				done();
+				// This inner timer allows us to wait for peer reports before restarting.
+				timer.schedule(new TimerTask() {
+					public void run() {
+						LOGGER.log(Level.INFO, "restarting system");
+						peers.clear();
+						done = false;
+					}
+				}, MINUTES_TO_WAIT_FOR_REPORT*60*1000);
+			}
+		}, MINUTES_TO_RUN_SYSTEM*60*1000, MINUTES_TO_RUN_SYSTEM*60*1000);
 	}
 	
 	/**
