@@ -7,7 +7,7 @@ class Peer:
     def __init__(self, peer, senderAddress):
         self.peer = peer
         self.senderAddress = senderAddress
-        self.timer = threading.Timer(120.0, self.setNotActive).start()
+        self.timer = threading.Timer(5*60, self.setNotActive).start()
         self.isActive = 1
         self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -22,7 +22,7 @@ class Peer:
     def resetTimer(self):
         if self.timer:
             self.timer.cancel()
-        self.timer = threading.Timer(60.0, self.setNotActive).start()
+        self.timer = threading.Timer(5*60, self.setNotActive).start()
 
 class GroupManager:
 

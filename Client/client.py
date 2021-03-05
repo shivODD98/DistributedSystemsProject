@@ -85,14 +85,13 @@ class Process:
         self.received_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         nPeers = await self.communicator.readLine()
         nPeers = int(nPeers)
-
+        print(nPeers)
         for _ in range(nPeers):
             peer = await self.communicator.readLine()
             print(peer)
             peer = peer.split('\n')[0]
             self.group_manager.add(peer)
 
-        print(self.group_manager.get_peers())
 
     async def handleReportRequest(self):
         print("Report Request")
@@ -195,7 +194,7 @@ class Process:
         asyncio.run(self.run())
 
 
-process = Process('10.58.192.53', 55921)
+process = Process('10.0.0.187', 55921)
 process.start()
 
 
