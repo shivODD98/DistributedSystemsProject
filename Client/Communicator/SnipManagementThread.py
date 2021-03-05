@@ -18,16 +18,16 @@ class SnipManagementThread(threading.Thread):
         print("Starting " + self.name)
         while self.isAlive:
             msg = input("Please enter something: ") # need to stop this in shutdown process
-            self.broadcastSnip(msg)
+            if self.isAlive:
+                self.broadcastSnip(msg)
     
     def broadcastSnip(self, msg):
         peers = self.group_manager.get_peers()
 
         self.snipManager.clock.increment
         for peer in peers:
-            # if peer.isActive:
-            print('sending message to ' + peer)
-            sendToAdressInfo = peer.split(':')
+            print('sending message to ' + peer.peer)
+            sendToAdressInfo = peer.peer.split(':')
             snipMsg = f'snip{self.snipManager.clock.getCounterValue()} {msg}'
             if self.isAlive:
                 self.socket.sendto(

@@ -7,11 +7,12 @@ from Communicator.SnipManager import SnipManager
 
 class GroupCommunicator:
 
-    def __init__(self, group_manager):
+    def __init__(self, group_manager, snipManager):
         # self.server_ip = server_ip
         # self.server_port = server_port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.group_manager = group_manager
+        self.snipManager = snipManager
         self.isAlive = 1
         self.threads = []
 
@@ -26,10 +27,8 @@ class GroupCommunicator:
 
         print("UDP server is starting...")
         print(self.group_manager.get_peers())
-        self.threads = []
-        snipManager = SnipManager()
         peerManagementWThread = PeerManagementThread(1, self.group_manager, 10)
-        snipManagementWThread = SnipManagementThread(2, self.group_manager, snipManager)
+        snipManagementWThread = SnipManagementThread(2, self.group_manager, self.snipManager)
 
         peerManagementWThread.start()
         snipManagementWThread.start()
@@ -58,14 +57,13 @@ class GroupCommunicator:
                     print(f'snip {data}')
                     snipData = data.split('snip')[1].split(' ')
                     print(snipData[0], snipData[1])
-                    snipManager.add(snipData[1], snipData[0], addr)
+                    self.snipManager.add(snipData[1], snipData[0], addr)
 
                 elif 'peer' in data:
                     print(f'peer {data}')
-                    peerData = data.split('peer')[1].split(':')
-                    print(peerData[0], peerData[1])
-                    snipManager.add(peerData[1], peerData[0], addr)
-                    # group_manager.add(data)
+                    peerData = data[4:]
+                    print(peerData)
+                    self.group_manager.add(peerData)
 
                 elif 'kill' in data:
                     print(f'kill {data}')

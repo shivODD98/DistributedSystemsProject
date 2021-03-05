@@ -26,7 +26,7 @@ class SnipManager:
 
     def add(self, msg, timestamp, sender):
         """ Adds a new message to the list (Thread safe)"""
-        self.clock.updateToValue(max(self.clock.getCounterValue(), timestamp))
+        self.clock.updateToValue(max(self.clock.getCounterValue(), int(timestamp)))
         snip = Snip(msg, timestamp, sender)
         self.__message_list.append(snip)
         self.clock.increment()

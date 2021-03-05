@@ -4,6 +4,7 @@ import threading
 from datetime import datetime
 from GroupManager import GroupManager
 from Communicator.GroupCommunicator import GroupCommunicator
+from Communicator.SnipManager import SnipManager
 import time
 
 # Helper class for communicating through a channel
@@ -50,7 +51,11 @@ class Process:
         self.encoding = encoding
         self.communicator = ChannelCommunicator()
         self.group_manager = GroupManager()
-        self.groupCommunicator = GroupCommunicator(self.group_manager)
+        self.snipManager = SnipManager()
+        self.groupCommunicator = GroupCommunicator(
+            self.group_manager, self.snipManager)
+        
+
 
     async def handleTeamNameRequest(self):
         print('Team Name Request')

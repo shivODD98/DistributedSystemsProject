@@ -22,16 +22,15 @@ class PeerManagementThread(threading.Thread):
     
     def sendPeerMsg(self):
         peers = self.group_manager.get_peers()
-        peerInfo = peers[random.randint(0, (len(peers)-1))]
-
+        peerInfo = peers[random.randint(0, (len(peers)-1))].peer
         for peer in peers:
-            # if peer.isActive:
+            if peer.isActive:
             # print('sending message to ' + peer)
-            msg = f'peer{peerInfo}'
-            sendToAdressInfo = peer.split(':')
-            if self.isAlive:
-                self.socket.sendto(
-                    bytes(msg, "utf-8"), (f'{sendToAdressInfo[0]}', int(sendToAdressInfo[1])))
+                msg = f'peer{peerInfo}'
+                sendToAdressInfo = peer.peer.split(':')
+                if self.isAlive:
+                    self.socket.sendto(
+                        bytes(msg, "utf-8"), (f'{sendToAdressInfo[0]}', int(sendToAdressInfo[1])))
 
     def kill(self):
         print('killing ' + self.name)
