@@ -20,7 +20,7 @@ class GroupCommunicator:
         # Start a socket server to listen on a free port that is to be determined
         self.socket.bind((socket.gethostname(), 0))
         hostName = self.socket.getsockname()
-        self.group_manager.add(f'{hostName[0]}:{hostName[1]}\n','')
+        self.group_manager.add(f'{hostName[0]}:{hostName[1]}','')
         return hostName
 
     # TODO: need to make this on a new thread because it completly hangs the console
