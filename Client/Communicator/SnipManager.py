@@ -36,12 +36,16 @@ class SnipManager:
 
     def get_msgs(self):
         """ Get a list of all messages sent and recieved in order """
-        return self.__message_list.copy()
+        snippets = self.__message_list.copy()
+        snippets.sort(reverse=False, key =lambda x: int(x.timestamp))
+        return snippets
 
     def print_msgs(self):
+        messages = self.get_msgs()
+        print(messages)
         print('\n\n')
         print('Timestamp:   |   Message:\n')
-        for msg in self.__message_list:
+        for msg in messages:
             print('--------------------------\n')
             print(f'{msg.timestamp}             {msg.snip_msg}')
             print('--------------------------\n')
