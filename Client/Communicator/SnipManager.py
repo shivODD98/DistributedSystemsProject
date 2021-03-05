@@ -1,6 +1,6 @@
 import sys
 from Communicator.LogicalClock import LogicalClock
-
+from datetime import datetime
 
 class Snip:
 
@@ -8,6 +8,7 @@ class Snip:
         self.snip_msg = msg
         self.timestamp = timestamp
         self.sender = sender
+        self.timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
 class SnipManager:
 
@@ -41,6 +42,6 @@ class SnipManager:
         print('Timestamp:   |   Message:\n')
         for msg in self.__message_list:
             print('--------------------------\n')
-            print(f'{msg.timestamp}     {msg.snip_msg}')
+            print(f'{msg.timestamp}             {msg.snip_msg}')
             print('--------------------------\n')
         print('\n\n')

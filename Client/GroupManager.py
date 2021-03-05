@@ -4,8 +4,9 @@ from datetime import datetime
 import sys
 
 class Peer:
-    def __init__(self, peer):
+    def __init__(self, peer, senderAddress):
         self.peer = peer
+        self.senderAddress = senderAddress
         self.timer = threading.Timer(120.0, self.setNotActive).start()
         self.isActive = 1
         self.timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -24,7 +25,7 @@ class GroupManager:
         self.__list = [] # A dictionary to avoid duplicates
         self.mutex = Lock()
     
-    def add(self, peerAddress):
+    def add(self, peerAddress, addr=''):
         """ Adds a new unique peer to the list (Thread safe)"""
 
         for i in range(len(self.__list)):
@@ -32,7 +33,7 @@ class GroupManager:
                 self.__list[i].resetTimer()
                 return
         
-        peer = Peer(peerAddress)
+        peer = Peer(peerAddress, addr)
         self.mutex.acquire()
         self.__list.append(peer)
         self.mutex.release()

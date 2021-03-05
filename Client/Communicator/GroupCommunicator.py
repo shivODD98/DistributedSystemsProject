@@ -62,7 +62,7 @@ class GroupCommunicator:
                     print(f'peer {data}')
                     peerData = data[4:]
                     print(peerData)
-                    self.group_manager.add(peerData)
+                    self.group_manager.add(peerData, addr)
 
                 elif 'kill' in data:
                     print(f'kill {data}')
