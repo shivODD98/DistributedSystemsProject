@@ -35,7 +35,7 @@ class PeerManagementThread(threading.Thread):
 
     def kill(self):
         print('killing ' + self.name)
-        self.isAlive = 0
+        self.isAlive = ''
         self.socket.close()
 
     

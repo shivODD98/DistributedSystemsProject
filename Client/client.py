@@ -75,6 +75,7 @@ class Process:
 
         for _ in range(nPeers):
             peer = await self.communicator.readLine()
+            print(peer)
             peer = peer.split('\n')[0]
             self.group_manager.add(peer)
 
@@ -148,6 +149,9 @@ class Process:
         time.sleep(60)
         self.groupCommunicator.kill()
         t.join()
+        # Use a while loop to check and see if the gc thread is alive or not anymore and then shutdown whatever here too       
+        # while self.groupCommunicator.isAlive:
+            
         print("back to main client")
         # need to kill asyncio socket to
 
@@ -161,4 +165,5 @@ process.start()
 #OLD
 Peers = []
 Sources = []
+# python client/client.py
 

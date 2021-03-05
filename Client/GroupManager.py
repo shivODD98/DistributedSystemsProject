@@ -1,5 +1,19 @@
 from threading import Lock
+import threading
 import sys
+
+
+class Peer:
+    def __init__(self, peer):
+        self.peer = peer
+        self.timer = threading.Timer(120.0, setNotActive).start()
+        self.isActive = 1
+
+    def setNotActive(self):
+        self.isActive = ''
+
+    def resetTimer(self):
+        self.timer = threading.Timer(120.0, setNotActive).start()
 
 class GroupManager:
 
