@@ -26,7 +26,6 @@ class GroupCommunicator:
     def start(self):
 
         print("UDP server is starting...")
-        print(self.group_manager.get_peers())
         peerManagementWThread = PeerManagementThread(1, self.group_manager, 10)
         snipManagementWThread = SnipManagementThread(2, self.group_manager, self.snipManager)
 

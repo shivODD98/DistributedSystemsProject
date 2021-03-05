@@ -164,7 +164,7 @@ class Process:
         asyncio.run(self.run())
 
 
-process = Process('192.168.1.89', 55921)
+process = Process('136.159.5.22', 55921)
 process.start()
 
 #OLD

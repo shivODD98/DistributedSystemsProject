@@ -18,7 +18,8 @@ class SnipManagementThread(threading.Thread):
         print("Starting " + self.name)
         while self.isAlive:
             msg = input("> ") # need to stop this in shutdown process
-            print(self.isAlive)
+            if msg == 'exit':
+                break
             if self.isAlive:
                 self.broadcastSnip(msg)
     
