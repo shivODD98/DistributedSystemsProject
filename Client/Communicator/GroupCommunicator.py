@@ -43,6 +43,7 @@ class GroupCommunicator:
         while self.isAlive:
             if self.isAlive:
                 data,addr = self.socket.recvfrom(1024)
+                sourcePeer = f'{addr[0]}:{addr[1]}'
                 data = data.decode('utf-8')
                 print(f"received message: {data} from: {addr}\n\n")
 
@@ -56,13 +57,14 @@ class GroupCommunicator:
                     print(f'snip {data}')
                     snipData = data.split('snip')[1].split(' ')
                     print(snipData[0], snipData[1])
-                    self.snipManager.add(data[6:], snipData[0], addr)
+                    self.snipManager.add(data[6:], snipData[0], sourcePeer)
 
                 elif 'peer' in data:
                     print(f'peer {data}')
                     peerData = data[4:]
                     print(peerData)
-                    self.group_manager.add(peerData, addr)
+                    self.group_manager.add(peerData, sourcePeer)
+                    self.group_manager.received_peer(peerData, sourcePeer)
 
                 elif 'kill' in data:
                     print(f'kill {data}')
@@ -80,7 +82,9 @@ class GroupCommunicator:
     
     def killThreads(self):
         for t in self.threads:
+            print(t)
             t.kill()
+            t.stop()
             t.join()
 
 

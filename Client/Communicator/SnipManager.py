@@ -8,7 +8,7 @@ class Snip:
         self.snip_msg = msg
         self.timestamp = timestamp
         self.sender = sender
-        self.date = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        self.date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 class SnipManager:
 

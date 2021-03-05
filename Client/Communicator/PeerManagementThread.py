@@ -26,6 +26,7 @@ class PeerManagementThread(threading.Thread):
         for peer in peers:
             if peer.isActive:
             # print('sending message to ' + peer)
+                self.group_manager.send_peer(peerInfo, peer.peer)
                 msg = f'peer{peerInfo}'
                 sendToAdressInfo = peer.peer.split(':')
                 if self.isAlive:

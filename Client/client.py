@@ -49,6 +49,7 @@ class Process:
         self.registry_ip = registry_ip
         self.registry_port = registry_port
         self.encoding = encoding
+        self.received_timestamp = ''
         self.communicator = ChannelCommunicator()
         self.group_manager = GroupManager()
         self.snipManager = SnipManager()
@@ -81,6 +82,7 @@ class Process:
 
     async def handleReceiveRequest(self):
         print('Receive Request')
+        self.received_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         nPeers = await self.communicator.readLine()
         nPeers = int(nPeers)
 
@@ -95,19 +97,44 @@ class Process:
     async def handleReportRequest(self):
         print("Report Request")
 
-        # await communicator.writeMsg(f'{len(Peers)}\n')
-        # for peer in Peers:
-        #     await communicator.writeMsg(f'{peer}\n')
+        report = ''
+        peers = self.group_manager.get_peers()
+        # 1. Current list of peers
+        report += f'{len(peers)}\n'
+        for peer in peers:
+           report += f'{str(peer.peer)}\n'
 
-        # await communicator.writeMsg(f'{len(Sources)}\n')
+        # 2. peer list sources
+        report += f'1\n'
+        report += f'{self.registry_ip}:{self.registry_port}\n'
+        report += f'{self.received_timestamp}\n'
 
-        # for source in Sources:
-        #     await communicator.writeMsg(f'{source["Address"]}\n')
-        #     await communicator.writeMsg(f'{source["Date"]}\n')
+        registry_peers = [peer for peer in peers if peer.from_registry]
+        report += f'{len(registry_peers)}\n'
+        for peer in registry_peers:
+            if peer.from_registry:
+                report += f'{peer.peer}\n'
 
-        #     await communicator.writeMsg(f'{len(Peers)}\n')
-        #     for peer in Peers:
-        #         await communicator.writeMsg(f'{peer}\n')
+        # 3. all peers received from udp
+        received_peers = self.group_manager.get_received_peers()
+        report += f'{len(received_peers)}\n'
+        for peer in received_peers:
+            report += f'{peer.senderAddress} {peer.peer} {peer.timestamp}\n'
+        
+        # 4. all peers sent through udp
+        sent_peers = self.group_manager.get_sent_peers()
+        report += f'{len(sent_peers)}\n'
+        for peer in sent_peers:
+            report += f'{peer.senderAddress} {peer.peer} {peer.timestamp}\n'
+
+        # 5. all snippets received, in timestamp order
+        snippets = self.snipManager.get_msgs()
+        report += f'{len(snippets)}\n'
+        for snippet in snippets:
+            report += f'{snippet.timestamp} {snippet.snip_msg} {snippet.sender}\n'
+        # send report
+        await self.communicator.writeMsg(report)
+        print(report)
 
     def startGroupCommunicator(self):
         self.groupCommunicator.start()
@@ -148,6 +175,7 @@ class Process:
                     print("2nd communication ended with registry")
                     break;
     
+                self.communicator.closeWriter()
                 # start group communicator on new thread (maybe pass group manager into it?)
                 t = threading.Thread(target=self.startGroupCommunicator)
                 t.start()
@@ -159,15 +187,15 @@ class Process:
                 t.join()
                 print("back to main client")
                 isShuttingDown = True
+                self.communicator.reader, self.communicator.writer = await asyncio.open_connection(self.registry_ip, self.registry_port)
 
-        self.communicator.closeWriter()
 
             
     def start(self):
         asyncio.run(self.run())
 
 
-process = Process('192.168.1.89', 55921)
+process = Process('10.58.192.53', 55921)
 process.start()
 
 

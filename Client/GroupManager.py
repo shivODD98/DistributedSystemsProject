@@ -9,7 +9,12 @@ class Peer:
         self.senderAddress = senderAddress
         self.timer = threading.Timer(120.0, self.setNotActive).start()
         self.isActive = 1
-        self.timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        if senderAddress == '':
+            self.from_registry = True
+        else:
+            self.from_registry = False
 
     def setNotActive(self):
         self.isActive = ''
@@ -22,9 +27,19 @@ class Peer:
 class GroupManager:
 
     def __init__(self):
-        self.__list = [] # A dictionary to avoid duplicates
+        self.__list = []
+        self.__sent_peers = []
+        self.__received_peers = []
         self.mutex = Lock()
     
+    def send_peer(self, peer, sent_to):
+        peer = Peer(peer, sent_to)
+        self.__sent_peers.append(peer)
+
+    def received_peer(self, peer, source):
+        peer = Peer(peer, source)
+        self.__received_peers.append(peer)
+
     def add(self, peerAddress, addr=''):
         """ Adds a new unique peer to the list (Thread safe)"""
 
@@ -46,4 +61,10 @@ class GroupManager:
 
     def get_peers(self):
         """ Get a list of all connected peers """
-        return self.__list
+        return self.__list.copy()
+
+    def get_received_peers(self):
+        return self.__received_peers.copy()
+
+    def get_sent_peers(self):
+        return self.__sent_peers.copy()
