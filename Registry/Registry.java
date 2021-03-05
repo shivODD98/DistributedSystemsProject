@@ -38,7 +38,7 @@ public class Registry {
 	 * the system down and wait for reports from peers in the system.  Note that the time
 	 * we spend waiting for reports will reduce the time we run the system.
 	 */
-	public static final int MINUTES_TO_RUN_SYSTEM = 10;
+	public static final int MINUTES_TO_RUN_SYSTEM = 1;
 	
 	/** Length of time to wait for connection from peers after shut down message was multicast.
 	 * This connection is to communicate with peers and get their reports.
