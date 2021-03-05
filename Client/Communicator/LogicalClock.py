@@ -13,8 +13,7 @@ class LogicalClock:
     def updateToValue(self, val):
         """ Update Logical Clocks counter to specific value """
         self.counter = val
-        return self.__message_list.copy()
 
     def getCounterValue(self):
         """ Get the logical clocks ounter value """
-        return self.counter.copy()
+        return self.counter

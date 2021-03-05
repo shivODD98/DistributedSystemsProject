@@ -4,6 +4,7 @@ import threading
 from datetime import datetime
 from GroupManager import GroupManager
 from Communicator.GroupCommunicator import GroupCommunicator
+from Communicator.SnipManager import SnipManager
 import time
 
 # Helper class for communicating through a channel
@@ -50,7 +51,11 @@ class Process:
         self.encoding = encoding
         self.communicator = ChannelCommunicator()
         self.group_manager = GroupManager()
-        self.groupCommunicator = GroupCommunicator(self.group_manager)
+        self.snipManager = SnipManager()
+        self.groupCommunicator = GroupCommunicator(
+            self.group_manager, self.snipManager)
+        
+
 
     async def handleTeamNameRequest(self):
         print('Team Name Request')
@@ -81,6 +86,7 @@ class Process:
 
         for _ in range(nPeers):
             peer = await self.communicator.readLine()
+            print(peer)
             peer = peer.split('\n')[0]
             self.group_manager.add(peer)
 
@@ -154,6 +160,9 @@ class Process:
         time.sleep(60)
         self.groupCommunicator.kill()
         t.join()
+        # Use a while loop to check and see if the gc thread is alive or not anymore and then shutdown whatever here too       
+        # while self.groupCommunicator.isAlive:
+            
         print("back to main client")
         # need to kill asyncio socket to
 
