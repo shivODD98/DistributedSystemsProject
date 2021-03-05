@@ -90,37 +90,30 @@ class Process:
             peer = peer.split('\n')[0]
             self.group_manager.add(peer)
 
-        # now = datetime.now()
-        # date = now.strftime("%Y-%m-%d %H:%M:%S")
-        # address = f'{ip_address}:{port_number}'
-        # if not list(filter(lambda source: source['Address'] == address, Sources)):
-        #     Sources.append({
-        #         "Address": address,
-        #         "Date": date
-        #     })
         print(self.group_manager.get_peers())
 
     async def handleReportRequest(self):
         print("Report Request")
 
-        await communicator.writeMsg(f'{len(Peers)}\n')
-        for peer in Peers:
-            await communicator.writeMsg(f'{peer}\n')
+        # await communicator.writeMsg(f'{len(Peers)}\n')
+        # for peer in Peers:
+        #     await communicator.writeMsg(f'{peer}\n')
 
-        await communicator.writeMsg(f'{len(Sources)}\n')
+        # await communicator.writeMsg(f'{len(Sources)}\n')
 
-        for source in Sources:
-            await communicator.writeMsg(f'{source["Address"]}\n')
-            await communicator.writeMsg(f'{source["Date"]}\n')
+        # for source in Sources:
+        #     await communicator.writeMsg(f'{source["Address"]}\n')
+        #     await communicator.writeMsg(f'{source["Date"]}\n')
 
-            await communicator.writeMsg(f'{len(Peers)}\n')
-            for peer in Peers:
-                await communicator.writeMsg(f'{peer}\n')
+        #     await communicator.writeMsg(f'{len(Peers)}\n')
+        #     for peer in Peers:
+        #         await communicator.writeMsg(f'{peer}\n')
 
     def startGroupCommunicator(self):
         self.groupCommunicator.start()
         
     async def run(self):
+        isShuttingDown = False
         # Initalize UDP server first to get location
         udp_address = self.groupCommunicator.initalize()
         print(f"UDP server initalized on {udp_address}")
@@ -146,26 +139,30 @@ class Process:
             elif re.search(data, self.Protocol["Receive Request"]):
                 await self.handleReceiveRequest()
 
-            # elif re.search(data, self.Protocol["Report Request"]):
-            #     await handleReportRequest(communicator)
+            elif re.search(data, self.Protocol["Report Request"]):
+                await self.handleReportRequest()
 
             elif re.search(data, self.Protocol["Close Request"]):
                 print("Close Request")
-                break
+                if isShuttingDown:
+                    print("2nd communication ended with registry")
+                    break;
+    
+                # start group communicator on new thread (maybe pass group manager into it?)
+                t = threading.Thread(target=self.startGroupCommunicator)
+                t.start()
+
+                # DEBUG
+                # time.sleep(60)
+                # self.groupCommunicator.kill()
+
+                t.join()
+                print("back to main client")
+                isShuttingDown = True
+
         self.communicator.closeWriter()
 
-        # start group communicator on new thread (maybe pass group manager into it?)
-        t = threading.Thread(target=self.startGroupCommunicator)
-        t.start()
-        time.sleep(60)
-        self.groupCommunicator.kill()
-        t.join()
-        # Use a while loop to check and see if the gc thread is alive or not anymore and then shutdown whatever here too       
-        # while self.groupCommunicator.isAlive:
             
-        print("back to main client")
-        # need to kill asyncio socket to
-
     def start(self):
         asyncio.run(self.run())
 
