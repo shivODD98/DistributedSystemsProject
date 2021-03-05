@@ -19,8 +19,9 @@ class GroupCommunicator:
     def initalize(self, queueLength = 10):
         # Start a socket server to listen on a free port that is to be determined
         self.socket.bind((socket.gethostname(), 0))
-
-        return self.socket.getsockname()
+        hostName = self.socket.getsockname()
+        self.group_manager.add(f'{hostName[0]}:{hostName[1]}\n','')
+        return hostName
 
     # TODO: need to make this on a new thread because it completly hangs the console
     def start(self):
