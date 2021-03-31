@@ -45,6 +45,8 @@ class GroupCommunicator:
                 if not data:
                     continue
                 elif 'stop' in data:
+                    # send 'ack' to socket (registry), then kill
+                    self.socket.sendto(bytes("ack2AM Design", "utf-8"), (f'{addr[0]}', int(addr[1])))
                     self.kill()
 
                 elif 'snip' in data:
