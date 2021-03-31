@@ -8,6 +8,7 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.Random;
 import java.util.Scanner;
@@ -38,12 +39,18 @@ public class Registry {
 	 * the system down and wait for reports from peers in the system.  Note that the time
 	 * we spend waiting for reports will reduce the time we run the system.
 	 */
-	public static final int MINUTES_TO_RUN_SYSTEM = 1;
+	public static final int MINUTES_TO_RUN_SYSTEM = 10;
 	
 	/** Length of time to wait for connection from peers after shut down message was multicast.
 	 * This connection is to communicate with peers and get their reports.
 	 */
-	public static final int MINUTES_TO_WAIT_FOR_REPORT = 2;
+	public static final int MINUTES_TO_WAIT_FOR_REPORT = 3;
+	
+	/** Length of time we'll wait for ack of stop message before resending the message. */
+	public static final int SECONDS_TO_WAIT_FOR_ACK	 = 10;
+	
+	/** number of times we'll resend 'stop' requests if no ack received. */
+	public static final int NUM_OF_TIMES_SEND_STOP = 3;
 	
 	private final static Logger LOGGER = Logger.getLogger(Registry.class.getName());
 	
@@ -86,6 +93,8 @@ public class Registry {
 			LOGGER.log(Level.INFO, "Server started at " + 
 					server.getInetAddress().getLocalHost().getHostAddress() +
 					":" + portNumber);
+			// We're ending and restarting this registry continually.  For each restart
+			// we'll continue to use the same server socket.
 			//while (!done) {
 			while (true) {
 				Socket sock = server.accept();
@@ -120,6 +129,7 @@ public class Registry {
 						done();
 					}
 				}
+				System.out.println("Thread to read input from command line is done.");
 			}
 			
 		});
@@ -143,8 +153,15 @@ public class Registry {
 				timer.schedule(new TimerTask() {
 					public void run() {
 						LOGGER.log(Level.INFO, "restarting system");
+						RequestProcessor.nextRun();
 						peers.clear();
 						done = false;
+						String[] argsForPeer = {"localhost","" + portNumber, "test"};
+						try {
+							peer.Iteration3Solution.main(argsForPeer);
+						} catch (Exception e) {
+							System.out.println("Problem running test peers");
+						}
 					}
 				}, MINUTES_TO_WAIT_FOR_REPORT*60*1000);
 			}
@@ -152,23 +169,75 @@ public class Registry {
 	}
 	
 	/**
-	 * Flag that we are in the shutdown phase.  Well send a UDP message to each peer to let them know
+	 * Reveive messages coming in along this UDP socket.  The only messages we're interested
+	 * in are ack message which are expected to be in the format:
+	 * ack<team name>
+	 * <p>
+	 * All other messages are ignored.  This method will continue reading until the socket 
+	 * is closed.
+	 * 
+	 * @param udpSocket socket for receiving udp messages.
+	 */
+	private void receiveAcks(DatagramSocket udpSocket) {
+		boolean socketOpen = true;
+		while (socketOpen) {
+			byte[] message = new byte[1024];
+			DatagramPacket packet = new DatagramPacket(message,1024);
+			try {
+				udpSocket.receive(packet);
+				String ackMessage = new String(message);
+				if (ackMessage.substring(0,3).equalsIgnoreCase("ack")) {
+					String teamName = ackMessage.substring(3).trim();
+					Peer p = peers.get(teamName);
+					if (p != null) {
+						p.acked = true;
+						LOGGER.log(Level.INFO, "Received ack from " + teamName);
+					} else {
+						LOGGER.log(Level.INFO, "Can't store ack, unknown teamname: " + teamName);
+					}
+				}
+			} catch (IOException e) {
+				// do nothing.  When socket closes we can end this method.
+				socketOpen = false;
+			}
+		}
+	}
+	
+	/**
+	 * Flag that we are in the shutdown phase.  We'll send a UDP message to each peer to let them know
 	 * to end their work and re-connect with the registry to submit a final report.
 	 */
 	private void done() {
 		done = true;
 		// Let all processes we know about that we're done and that they should shut down.
 		// TODO: create multiple threads so we can communicate with multiple peers simultaneously
-		Collection<Peer> knownPeers = peers.values();
 		try {
 			DatagramSocket udpServer = new DatagramSocket();
+			Thread ackReceiver = new Thread( () -> receiveAcks(udpServer));
+			ackReceiver.start();
+			
 			byte[] msg = "stop".getBytes();
-			for (Peer p : knownPeers) {
+
+			for (int counter = 0; counter < 3; counter++) {
+				LOGGER.log(Level.INFO, "Round " + (counter + 1) + " of sending 'stop' to peers'");
+				Collection<Peer> knownPeers = peers.values();
+				for (Peer p : knownPeers) {
+					if (!p.acked) { 
+						try {
+							System.out.println("About to send 'stop' to " + p);
+							DatagramPacket packet = new DatagramPacket(msg, msg.length, InetAddress.getByName(p.address), p.getPort());
+							udpServer.send(packet);
+							LOGGER.log(Level.INFO, "Sent 'stop' to " + p);
+						} catch (IOException e) {
+							LOGGER.log(Level.INFO, " Problem sending 'stop' to " + p.teamName);
+						}
+					}
+				}
+				
 				try {
-					DatagramPacket packet = new DatagramPacket(msg, msg.length, InetAddress.getByName(p.address), p.port);
-					udpServer.send(packet);
-					System.out.println("Sent 'stop' to " + p);
-				} catch (IOException e) {
+					Thread.sleep(10*1000);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -177,6 +246,7 @@ public class Registry {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
+		System.exit(0);
 	}
 	
 	/*----------------------------------- end of updated code --------------------------------------*/
