@@ -140,7 +140,6 @@ class Process:
         
     async def run(self):
         isShuttingDown = False
-        # Initalize UDP server first to get location
         udp_address = self.groupCommunicator.initalize()
         print(f"UDP server initalized on {udp_address}")
         
@@ -175,16 +174,9 @@ class Process:
                     break;
     
                 self.communicator.closeWriter()
-                # start group communicator on new thread (maybe pass group manager into it?)
                 t = threading.Thread(target=self.startGroupCommunicator)
                 t.start()
-
-                # DEBUG
-                # time.sleep(60)
-                # self.groupCommunicator.kill()
-
                 t.join()
-                print("back to main client")
                 isShuttingDown = True
                 self.communicator.reader, self.communicator.writer = await asyncio.open_connection(self.registry_ip, self.registry_port)
 
@@ -196,6 +188,3 @@ class Process:
 
 process = Process('192.168.1.89', 55921)
 process.start()
-
-
-# python Client/client.py

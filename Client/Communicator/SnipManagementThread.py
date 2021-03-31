@@ -5,6 +5,7 @@ import threading
 import sys
 
 class SnipManagementThread(threading.Thread):
+    """ Thread that handles sending snip messages to peers in the system """
 
     def __init__(self, threadId, group_manager, snipManager):
         threading.Thread.__init__(self)
@@ -15,9 +16,9 @@ class SnipManagementThread(threading.Thread):
         self.isAlive = 1
 
     def run(self):
+        """ Starts loop that broadcasts user inputed snip messages"""
         print("Starting " + self.name)
         while self.isAlive:
-            # msg = input("> ") # need to stop this in shutdown process
             msgs = list(map(str, input(">").split()))
             msg = ''
             for ms in msgs:
@@ -28,11 +29,11 @@ class SnipManagementThread(threading.Thread):
                 self.broadcastSnip(msg)
     
     def broadcastSnip(self, msg):
+        """ Broadcasts snip messages to peers in the system through socket"""
         peers = self.group_manager.get_peers()
 
         self.snipManager.clock.increment
         for peer in peers:
-            print('sending message to ' + peer.peer)
             sendToAdressInfo = peer.peer.split(':')
             snipMsg = f'snip{self.snipManager.clock.getCounterValue()} {msg}'
             if self.isAlive:
@@ -40,6 +41,7 @@ class SnipManagementThread(threading.Thread):
                     bytes(snipMsg, "utf-8"), (f'{sendToAdressInfo[0]}', int(sendToAdressInfo[1])))
 
     def kill(self):
+        """ Terminates SnipManagementThread and closes socket"""
         print('killing ' + self.name)
         self.isAlive = ''
         self.socket.close()

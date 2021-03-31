@@ -2,6 +2,7 @@ import sys
 
 
 class LogicalClock:
+    """ Used to maintain logical clock """
 
     def __init__(self):
         self.counter = 0

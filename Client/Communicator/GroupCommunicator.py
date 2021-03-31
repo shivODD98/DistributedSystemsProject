@@ -6,10 +6,9 @@ from Communicator.PeerManagementThread import PeerManagementThread
 from Communicator.SnipManager import SnipManager
 
 class GroupCommunicator:
+    """ Used to handle all incoming peer and snip messages """
 
     def __init__(self, group_manager, snipManager):
-        # self.server_ip = server_ip
-        # self.server_port = server_port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.group_manager = group_manager
         self.snipManager = snipManager
@@ -17,15 +16,16 @@ class GroupCommunicator:
         self.threads = []
 
     def initalize(self, queueLength = 10):
-        # Start a socket server to listen on a free port that is to be determined
+        """ Start a socket server to listen on a free port that is to be determined """
         self.socket.bind((socket.gethostname(), 0))
         hostName = self.socket.getsockname()
         self.group_manager.add(f'{hostName[0]}:{hostName[1]}','')
         return hostName
 
-    # TODO: need to make this on a new thread because it completly hangs the console
     def start(self):
-
+        """ Thread function that creates and starts threads that handle snip messages and peer messages. 
+            Terminates system when recieves 'stop' message """
+        
         print("UDP server is starting...")
         peerManagementWThread = PeerManagementThread(1, self.group_manager, 10)
         snipManagementWThread = SnipManagementThread(2, self.group_manager, self.snipManager)
@@ -36,44 +36,32 @@ class GroupCommunicator:
         self.threads.append(peerManagementWThread)
         self.threads.append(snipManagementWThread)
 
-        # time.sleep(30)
-        # self.killThreads(threads)
-        # self.kill()
-
-        # Need to send self close message to interput recv from call
         while self.isAlive:
             if self.isAlive:
                 data,addr = self.socket.recvfrom(1024)
                 sourcePeer = f'{addr[0]}:{addr[1]}'
                 data = data.decode('utf-8')
-                print(f"received message: {data} from: {addr}\n\n")
 
                 if not data:
                     continue
                 elif 'stop' in data:
-                    print(f'stop {data}')
                     self.kill()
 
                 elif 'snip' in data:
-                    print(f'snip {data}')
                     snipData = data.split('snip')[1].split(' ')
-                    print(snipData[0], snipData[1])
                     self.snipManager.add(data[6:], snipData[0], sourcePeer)
 
                 elif 'peer' in data:
-                    print(f'peer {data}')
                     peerData = data[4:]
-                    print(peerData)
                     self.group_manager.add(peerData, sourcePeer)
                     self.group_manager.received_peer(peerData, sourcePeer)
 
                 elif 'kill' in data:
-                    print(f'kill {data}')
                     self.socket.close()
                     break
 
     def kill(self):
-        print('killing gc and threads')
+        """ Terminates all active threads and closes socket """
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.sendto(
             bytes('kill', "utf-8"), self.socket.getsockname())
@@ -82,8 +70,8 @@ class GroupCommunicator:
         self.isAlive = ''
     
     def killThreads(self):
+        """ Terminates all threads """
         for t in self.threads:
-            print(t)
             t.kill()
             t.stop()
             t.join()

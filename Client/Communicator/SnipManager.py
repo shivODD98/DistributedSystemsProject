@@ -3,6 +3,7 @@ from Communicator.LogicalClock import LogicalClock
 from datetime import datetime
 
 class Snip:
+    """ Used to maintain snip instances and snip information """
 
     def __init__(self, msg, timestamp, sender):
         self.snip_msg = msg
@@ -11,24 +12,15 @@ class Snip:
         self.date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 class SnipManager:
+    """ Manages snips from and to our process """
 
     def __init__(self):
         self.clock = LogicalClock()
         self.__message_list = []
 
-    # def sendUserMsg(self, msg):
-    #     """ Sends a new user message to all connected peers (Thread safe)"""
-    #     self.__message_list.append(msg)
-    
-    # def getUsersMsg(self):
-    #     """ gets and waits for user input to console """
-    #     # https: // stackoverflow.com/questions/70797/how-to-prompt-for-user-input-and-read-command-line-arguments
-    #     self.__message_list.append('')
-
     def add(self, msg, timestamp, sender):
-        """ Adds a new message to the list (Thread safe)"""
+        """ Adds a new snip message to the list (Thread safe), updates logical clock and displays snip messages """
         self.clock.updateToValue(max(self.clock.getCounterValue(), int(timestamp)))
-        print(msg)
         snip = Snip(msg, timestamp, sender)
         self.__message_list.append(snip)
         self.clock.increment()
@@ -41,6 +33,7 @@ class SnipManager:
         return snippets
 
     def print_msgs(self):
+        """ Formats and prints snip messages """
         messages = self.get_msgs()
         print(messages)
         print('\n\n')
