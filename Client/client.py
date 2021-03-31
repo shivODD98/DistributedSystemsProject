@@ -183,7 +183,9 @@ class Process:
 
             
     def start(self):
-        asyncio.run(self.run())
+        loop = asyncio.get_event_loop()
+        result = loop.run_until_complete(self.run())
+        # asyncio.run(self.run())
 
 
 process = Process('136.159.5.22', 55921)
