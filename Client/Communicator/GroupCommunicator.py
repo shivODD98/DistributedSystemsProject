@@ -51,7 +51,14 @@ class GroupCommunicator:
 
                 elif 'snip' in data:
                     snipData = data.split('snip')[1].split(' ')
+                    # send 'ack' to socket (peer)
+                    self.socket.sendto(bytes(f"ack {snipData[0]}", "utf-8"), (f'{addr[0]}', int(addr[1])))
                     self.snipManager.add(data[6:], snipData[0], sourcePeer)
+                
+                elif 'ack' in data:
+                    # ack for a snip received
+                    timestamp = data.split(' ')[1]
+                    self.snipManager.add_ack(sourcePeer, timestamp)
 
                 elif 'peer' in data:
                     peerData = data[4:]
