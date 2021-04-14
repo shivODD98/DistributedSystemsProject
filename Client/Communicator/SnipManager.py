@@ -12,7 +12,7 @@ class Snip:
         self.date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 class Ack:
-    def __init__(self, peer, timestamp)
+    def __init__(self, peer, timestamp):
         self.timestamp = timestamp
         self.peer = peer
 
@@ -43,8 +43,14 @@ class SnipManager:
         return snippets
 
     def get_acks(self):
-        acks = sef.__ack_list.copy()
+        acks = self.__ack_list.copy()
         return acks
+
+    def addCtchSnip(self, originalSender, timestamp, content):
+        for snip in self.__message_list:
+            if snip.sender == originalSender and snip.timestamp == timestamp:
+                return
+        self.add(content, timestamp, originalSender)
 
     def print_msgs(self):
         """ Formats and prints snip messages """

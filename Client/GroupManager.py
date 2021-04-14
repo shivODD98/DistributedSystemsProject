@@ -9,20 +9,34 @@ class PeerStatus(Enum):
     SILENT: "silent"
     MISSING_ACK: "missing_ack"
 
-
 class Peer:
     """ Used to maintain peer instances and peer information """
 
     def __init__(self, peer, senderAddress):
         self.peer = peer
         self.senderAddress = senderAddress
-        self.isActive = True
+        self.timer = threading.Timer(5*60, self.setNotActive).start()
+        self.status = PeerStatus.ALIVE
         self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         if senderAddress == '':
             self.from_registry = True
         else:
             self.from_registry = False
+
+    def setPeerStatus(self, status):
+        """ Sets instance of peer's status parameter status """
+        self.status = status
+
+    def setNotActive(self):
+        """ Sets instance of peer's status to not active """
+        self.status = PeerStatus.SILENT
+
+    def resetTimer(self):
+        """ Resets peer activity timer  """
+        if self.timer:
+            self.timer.cancel()
+        self.timer = threading.Timer(5*60, self.setNotActive).start()
 
 
 class GroupManager:
@@ -50,7 +64,7 @@ class GroupManager:
 
         for i in range(len(self.__list)):
             if self.__list[i].peer == peerAddress:
-                # self.__list[i].resetTimer()
+                self.__list[i].resetTimer()
                 return
         
         peer = Peer(peerAddress, addr)

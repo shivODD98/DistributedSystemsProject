@@ -3,6 +3,7 @@ import random
 import time
 import threading
 import sys
+# from ..Client.GroupManager import PeerStatus
 
 class PeerManagementThread(threading.Thread):
     """ Thread that handles sending peer messages to active peers in the system """
@@ -27,7 +28,7 @@ class PeerManagementThread(threading.Thread):
         peers = self.group_manager.get_peers()
         peerInfo = peers[random.randint(0, (len(peers)-1))].peer
         for peer in peers:
-            if peer.isActive:
+            if peer.status == 'alive':
                 self.group_manager.send_peer(peerInfo, peer.peer)
                 msg = f'peer{peerInfo}'
                 sendToAdressInfo = peer.peer.split(':')
