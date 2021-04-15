@@ -5,9 +5,9 @@ import sys
 from enum import Enum
 
 class PeerStatus(Enum):
-    ALIVE: "alive"
-    SILENT: "silent"
-    MISSING_ACK: "missing_ack"
+    ALIVE= "alive"
+    SILENT= "silent"
+    MISSING_ACK= "missing_ack"
 
 class Peer:
     """ Used to maintain peer instances and peer information """
