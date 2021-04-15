@@ -49,11 +49,13 @@ class GroupCommunicator:
                     continue
                 elif 'stop' in data:
                     # send 'ack' to socket (registry), then kill
+                    print(f'sending ack for \'stop\' message')
                     self.socket.sendto(bytes("ack2AM Design", "utf-8"), (f'{addr[0]}', int(addr[1])))
                     self.kill()
                 
                 elif 'ack' in data:
                     # ack for a snip received
+                    print(f'received ack from {sourcePeer}')
                     timestamp = data.split(' ')[1]
                     self.snipManager.add_ack(sourcePeer, timestamp)
                     self.group_manager.received_ack(sourcePeer)
@@ -87,7 +89,7 @@ class GroupCommunicator:
         """ Handles ctch message by sending approapiate peer all known snip messages """
         snippets = self.snipManager.get_msgs()
         for snip in snippets:
-            if self.getPeerStatus() == PeerStatus.SILENT:
+            if self.getPeerStatus(addr, sourcePeer) == PeerStatus.SILENT:
                 self.socket.sendto(
                     bytes(
                         f"ctch{snip.sender} {snip.timestamp} {snip.snip_msg}", "utf-8"),
@@ -100,6 +102,7 @@ class GroupCommunicator:
         for peer in peers: 
             if peer.peer == sourcePeer:
                 return peer.status
+        return None;
 
     def kill(self):
         """ Terminates all active threads and closes socket """

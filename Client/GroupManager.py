@@ -1,5 +1,5 @@
 from threading import Lock
-import threading
+import threading, time
 from datetime import datetime
 import sys
 from enum import Enum
@@ -31,7 +31,8 @@ class Peer:
 
     def startAckTimer(self, resendMessage):
         self.resendMessage = resendMessage;
-        self.ackTimer.start()
+        if not self.ackTimer.is_alive():
+            self.ackTimer.start()
 
     def resendAck(self):
         """ Resends a message to a peer if ack was not received within a time period """

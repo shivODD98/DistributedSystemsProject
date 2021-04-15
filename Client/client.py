@@ -91,7 +91,7 @@ class Process:
             print(peer)
             peer = peer.split('\n')[0]
             self.group_manager.add(peer)
-        self.group_manager.add('10.0.0.232:54358')
+        # self.group_manager.add('10.0.0.232:52162')
 
 
     async def handleReportRequest(self):
@@ -195,7 +195,7 @@ class Process:
         # asyncio.run(self.run())
 
 
-process = Process('10.0.0.232', 55921)
+process = Process('136.159.5.22', 55921)
 process.start()
 
 #python Client/client.py
