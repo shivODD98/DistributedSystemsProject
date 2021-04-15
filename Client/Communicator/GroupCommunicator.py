@@ -4,6 +4,7 @@ import time
 from Communicator.SnipManagementThread import SnipManagementThread
 from Communicator.PeerManagementThread import PeerManagementThread
 from Communicator.SnipManager import SnipManager
+from GroupManager import PeerStatus
 
 class GroupCommunicator:
     """ Used to handle all incoming peer and snip messages """
@@ -71,25 +72,33 @@ class GroupCommunicator:
 
                 elif 'peer' in data:
                     peerData = data[4:]
+                    self.sendPeerAllSnips(addr, sourcePeer)
                     self.group_manager.add(peerData, sourcePeer)
                     self.group_manager.received_peer(peerData, sourcePeer)
-                    self.sendPeerAllSnips(addr)
+                    # self.sendPeerAllSnips(addr)
 
                 elif 'kill' in data:
                     self.socket.close()
                     self.sendSocket.close()
                     break
 
-    def sendPeerAllSnips(self, addr):
+    def sendPeerAllSnips(self, addr, sourcePeer):
         """ Handles ctch message by sending approapiate peer all known snip messages """
         snippets = self.snipManager.get_msgs()
         for snip in snippets:
-            self.socket.sendto(
-                bytes(
-                    f"ctch{snip.sender} {snip.timestamp} {snip.snip_msg}", "utf-8"),
-                    (f'{addr[0]}', int(addr[1])
+            if self.getPeerStatus() == PeerStatus.SILENT:
+                self.socket.sendto(
+                    bytes(
+                        f"ctch{snip.sender} {snip.timestamp} {snip.snip_msg}", "utf-8"),
+                        (f'{addr[0]}', int(addr[1])
+                    )
                 )
-            )
+
+    def getPeerStatus(self, addr, sourcePeer):
+        peers = self.group_manager.get_peers()
+        for peer in peers: 
+            if peer.peer == sourcePeer:
+                return peer.status
 
     def kill(self):
         """ Terminates all active threads and closes socket """
