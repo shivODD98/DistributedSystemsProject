@@ -31,14 +31,14 @@ class Peer:
 
     def startAckTimer(self, resendMessage):
         self.resendMessage = resendMessage;
-        if not self.ackTimer.is_alive():
-            self.ackTimer.start()
+        self.ackTimer = threading.Timer(10, self.resendAck)
+        self.ackTimer.start()
 
     def resendAck(self):
         """ Resends a message to a peer if ack was not received within a time period """
         self.retrys += 1
 
-        print(f'retry sending message {self.retrys} (attempt: {resendMessage})')
+        print(f'retry sending message {self.retrys} (attempt: {self.resendMessage})')
         # Set peer to silent
         if self.retrys > 3:
             self.status = PeerStatus.SILENT

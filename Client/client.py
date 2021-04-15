@@ -138,7 +138,7 @@ class Process:
         acks_received = self.snipManager.get_acks()
         report += f'{len(acks_received)}\n'
         for ack in acks_received:
-            reprot += f'{ack.peer} {ack.timestamp}\n'
+            report += f'{ack.peer} {ack.timestamp}\n'
         
         # send report
         await self.communicator.writeMsg(report)
