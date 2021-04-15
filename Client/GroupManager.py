@@ -13,7 +13,7 @@ class PeerStatus(Enum):
 class Peer:
     """ Used to maintain peer instances and peer information """
 
-    def __init__(self, peer, senderAddress):
+    def __init__(self, peer, senderAddress, socket=None):
         self.peer = peer
         self.senderAddress = senderAddress
         self.timer = threading.Timer(5*60, self.setNotActive).start()
@@ -22,7 +22,7 @@ class Peer:
         self.ackTimer = threading.Timer(10, self.resendAck)
         self.resendMessage = ''
         self.retrys = 0
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket = socket
 
         if senderAddress == '':
             self.from_registry = True
@@ -37,7 +37,7 @@ class Peer:
         """ Resends a message to a peer if ack was not received within a time period """
         self.retrys += 1
 
-        print(f'RETYING SENDING MESSAGE {self.retrys} attemtps: {resendMessage}')
+        print(f'retry sending message {self.retrys} (attempt: {resendMessage})')
         # Set peer to silent
         if self.retrys > 3:
             self.status = PeerStatus.SILENT
@@ -49,7 +49,6 @@ class Peer:
         self.socket.sendto(bytes(self.resendMessage, "utf-8"), (f'{address[0]}', int(address[1])))
 
     def cancelAckTimer(self):
-        print(self.ackTimer)
         self.ackTimer.cancel()
         self.retrys = 0
 
@@ -80,7 +79,13 @@ class GroupManager:
         self.__sent_peers = []
         self.__received_peers = []
         self.mutex = Lock()
+        self.socket = None
     
+    def insertSocket(self, socket):
+        self.socket = socket
+        for peer in self.__list:
+            peer.socket = socket
+
     def send_peer(self, peer, sent_to):
         """ Adds a new unique peer to __sent_peers list """
         peer = Peer(peer, sent_to)
@@ -100,7 +105,7 @@ class GroupManager:
                 self.__list[i].resetTimer()
                 return
         
-        peer = Peer(peerAddress, addr)
+        peer = Peer(peerAddress, addr, self.socket)
         self.mutex.acquire()
         self.__list.append(peer)
         self.mutex.release()
