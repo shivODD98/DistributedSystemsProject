@@ -87,7 +87,7 @@ public class Registry {
 		// This thread will look for command line input: right now the only command is 'done'
 		createCommandLineThread();
 		// Shuts-down and restarts the system on a timer.
-		createTimerThread();
+		//createTimerThread();
 		try {
 			ServerSocket server = new ServerSocket(portNumber);
 			LOGGER.log(Level.INFO, "Server started at " + 
@@ -156,12 +156,12 @@ public class Registry {
 						RequestProcessor.nextRun();
 						peers.clear();
 						done = false;
-						String[] argsForPeer = {"localhost","" + portNumber, "test"};
-						try {
-							peer.Iteration3Solution.main(argsForPeer);
-						} catch (Exception e) {
-							System.out.println("Problem running test peers");
-						}
+//						String[] argsForPeer = {"localhost","" + portNumber, "test"};
+//						try {
+//							peer.Iteration3Solution.main(argsForPeer);
+//						} catch (Exception e) {
+//							System.out.println("Problem running test peers");
+//						}
 					}
 				}, MINUTES_TO_WAIT_FOR_REPORT*60*1000);
 			}
@@ -235,7 +235,7 @@ public class Registry {
 				}
 				
 				try {
-					Thread.sleep(10*1000);
+					Thread.sleep(4*1000);  // wait 4 seconds and resend to any that haven't acked yet
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -246,7 +246,7 @@ public class Registry {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		System.exit(0);
+		//System.exit(0);
 	}
 	
 	/*----------------------------------- end of updated code --------------------------------------*/
@@ -259,7 +259,10 @@ public class Registry {
 	 */
 	public void addPeer(Peer p) {
 		Peer replaced = peers.put(p.key(), p);
-		if (replaced != null) p.peersSent = replaced.peersSent;
+		if (replaced != null) {
+			p.peersSent = replaced.peersSent;
+			p.acked = replaced.acked;
+		}
 	}
 	
 	/**

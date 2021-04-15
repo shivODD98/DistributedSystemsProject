@@ -8,11 +8,11 @@ from GroupManager import PeerStatus
 class PeerManagementThread(threading.Thread):
     """ Thread that handles sending peer messages to active peers in the system """
 
-    def __init__(self, threadId, group_manager, interval):
+    def __init__(self, threadId, group_manager, socket, interval):
         threading.Thread.__init__(self)
         self.threadId = threadId
         self.group_manager = group_manager
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket = socket
         self.interval = interval
         self.isAlive = 1
 

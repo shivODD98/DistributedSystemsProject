@@ -19,7 +19,8 @@ class Peer:
         self.timer = threading.Timer(5*60, self.setNotActive).start()
         self.status = PeerStatus.ALIVE
         self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.ackTimer = None
+        self.ackTimer = threading.Timer(10, self.resendAck)
+        self.resendMessage = ''
         self.retrys = 0
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -29,26 +30,27 @@ class Peer:
             self.from_registry = False
 
     def startAckTimer(self, resendMessage):
-        self.ackTimer = threading.Timer(10, self.resendAck, [resendMessage]).start()
+        self.resendMessage = resendMessage;
+        self.ackTimer.start()
 
-    def resendAck(self, resendMessage):
+    def resendAck(self):
         """ Resends a message to a peer if ack was not received within a time period """
         self.retrys += 1
 
+        print(f'RETYING SENDING MESSAGE {self.retrys} attemtps: {resendMessage}')
         # Set peer to silent
         if self.retrys > 3:
             self.status = PeerStatus.SILENT
-            if self.ackTimer is not None:
-                self.ackTimer.cancel()
+            self.ackTimer.cancel()
             return
 
         # Resend message
         address = self.peer.split(':')
-        self.socket.sendto(bytes(resendMessage, "utf-8"), (f'{address[0]}', int(address[1])))
+        self.socket.sendto(bytes(self.resendMessage, "utf-8"), (f'{address[0]}', int(address[1])))
 
     def cancelAckTimer(self):
-        if self.ackTimer is not None:
-            self.ackTimer.cancel()
+        print(self.ackTimer)
+        self.ackTimer.cancel()
         self.retrys = 0
 
     def setPeerStatus(self, status):

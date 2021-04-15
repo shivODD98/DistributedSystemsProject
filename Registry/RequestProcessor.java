@@ -145,9 +145,14 @@ class RequestProcessor implements Runnable {
 	private void closePeer(Peer addedPeer) throws IOException {
 		assert(peerSocket != null);
 		out.write("close\n");
-		sendFileContent(codeDirectory + "/" + addedPeer.teamName + "SourceCode." + peerLanguageExtension);
-		sendFileContent(reportDirectory + "/" + addedPeer.teamName + "Report.txt");
 		out.flush();
+		try {
+			sendFileContent(codeDirectory + "/" + addedPeer.teamName + "SourceCode." + peerLanguageExtension);
+			sendFileContent(reportDirectory + "/" + addedPeer.teamName + "Report.txt");
+			out.flush();
+		} catch (IOException ioe) {
+			System.out.println("Unable to sent code and report registry has on file so this part was skipped.");
+		}
 		peerSocket.close();
 	}
 
@@ -406,11 +411,13 @@ class RequestProcessor implements Runnable {
 		readPeerList(in, reportFile);
 		readListSources(in, reportFile);
 		
-		/* ------------------------------ Updated code ---------------------*/
-		// Report will contain additional info related to peer-to-peer communication
 		readSingleSources(in, reportFile);
 		readSends(in, reportFile);
 		readSnippets(in, reportFile);
+		/* ------------------------------ Updated code ---------------------*/
+		// Report will contain additional info related to snippet acks
+		System.out.println("About to read acks from report");
+		readAcks(in, reportFile);
 		/*------------------------------- end of updated code --------------*/
 		
 		reportFile.close();
@@ -452,9 +459,9 @@ class RequestProcessor implements Runnable {
 		// get the peer list
 		for (int counter = 0; counter < numOfPeers; counter++) {
 			out.write(in.readLine());
-			out.write(' ');
+			out.write('\n');
 		}
-		out.write('\n');
+//		out.write('\n');
 	}
 
 	/**
@@ -518,7 +525,6 @@ class RequestProcessor implements Runnable {
 		}
 	}
 
-	/* ---------------------------------- Start updated code ------------------------------------*/
 	
 	/**
 	 * One part of the communication between peers is peer list management.  This is done periodically sending
@@ -615,6 +621,18 @@ class RequestProcessor implements Runnable {
 		int numOfSnippets = Integer.parseInt(in.readLine());
 		out.write(numOfSnippets + " snippets:\n");
 		for (int counter = 0; counter < numOfSnippets; counter++) {
+			out.write(in.readLine());
+			out.write("\n");
+		}
+	}
+	
+	/* ---------------------------------- Start updated code ------------------------------------*/
+
+	private void readAcks(BufferedReader in, FileWriter out) throws IOException {
+		int numOfAcks = Integer.parseInt(in.readLine());
+		System.out.println("reading acks: " + numOfAcks);
+		out.write(numOfAcks + " snippet acks received:\n");
+		for (int counter = 0; counter < numOfAcks; counter++) {
 			out.write(in.readLine());
 			out.write("\n");
 		}

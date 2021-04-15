@@ -8,11 +8,11 @@ from GroupManager import PeerStatus
 class SnipManagementThread(threading.Thread):
     """ Thread that handles sending snip messages to peers in the system """
 
-    def __init__(self, threadId, group_manager, snipManager):
+    def __init__(self, threadId, group_manager, snipManager, socket):
         threading.Thread.__init__(self)
         self.threadId = threadId
         self.group_manager = group_manager
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket = socket
         self.snipManager = snipManager
         self.isAlive = 1
 

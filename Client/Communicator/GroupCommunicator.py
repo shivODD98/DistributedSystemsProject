@@ -27,8 +27,8 @@ class GroupCommunicator:
             Terminates system when recieves 'stop' message """
         self.group_manager
         print("UDP server is starting...")
-        peerManagementWThread = PeerManagementThread(1, self.group_manager, 10)
-        snipManagementWThread = SnipManagementThread(2, self.group_manager, self.snipManager)
+        peerManagementWThread = PeerManagementThread(1, self.group_manager, self.socket, 10)
+        snipManagementWThread = SnipManagementThread(2, self.group_manager, self.snipManager, self.socket)
 
         peerManagementWThread.start()
         snipManagementWThread.start()
@@ -40,6 +40,7 @@ class GroupCommunicator:
             if self.isAlive:
                 data,addr = self.socket.recvfrom(1024)
                 sourcePeer = f'{addr[0]}:{addr[1]}'
+                addr = sourcePeer.split(':')
                 data = data.decode('utf-8')
 
                 if not data:
@@ -48,6 +49,12 @@ class GroupCommunicator:
                     # send 'ack' to socket (registry), then kill
                     self.socket.sendto(bytes("ack2AM Design", "utf-8"), (f'{addr[0]}', int(addr[1])))
                     self.kill()
+                
+                elif 'ack' in data:
+                    # ack for a snip received
+                    timestamp = data.split(' ')[1]
+                    self.snipManager.add_ack(sourcePeer, timestamp)
+                    self.group_manager.received_ack(sourcePeer)
 
                 elif 'snip' in data:
                     snipData = data.split('snip')[1].split(' ')
@@ -62,12 +69,6 @@ class GroupCommunicator:
                     content = snipData[2]
                     self.snipManager.addCtchSnip(originalSender, timestamp, content)
 
-                elif 'ack' in data:
-                    # ack for a snip received
-                    timestamp = data.split(' ')[1]
-                    self.snipManager.add_ack(sourcePeer, timestamp)
-                    self.group_manager.received_ack(sourcePeer)
-
                 elif 'peer' in data:
                     peerData = data[4:]
                     self.group_manager.add(peerData, sourcePeer)
@@ -76,6 +77,7 @@ class GroupCommunicator:
 
                 elif 'kill' in data:
                     self.socket.close()
+                    self.sendSocket.close()
                     break
 
     def sendPeerAllSnips(self, addr):
