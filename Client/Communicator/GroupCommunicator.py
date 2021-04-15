@@ -25,7 +25,7 @@ class GroupCommunicator:
     def start(self):
         """ Thread function that creates and starts threads that handle snip messages and peer messages. 
             Terminates system when recieves 'stop' message """
-        
+        self.group_manager
         print("UDP server is starting...")
         peerManagementWThread = PeerManagementThread(1, self.group_manager, 10)
         snipManagementWThread = SnipManagementThread(2, self.group_manager, self.snipManager)
@@ -66,6 +66,7 @@ class GroupCommunicator:
                     # ack for a snip received
                     timestamp = data.split(' ')[1]
                     self.snipManager.add_ack(sourcePeer, timestamp)
+                    self.group_manager.received_ack(sourcePeer)
 
                 elif 'peer' in data:
                     peerData = data[4:]

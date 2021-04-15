@@ -3,11 +3,12 @@ import threading
 from datetime import datetime
 import sys
 from enum import Enum
+import socket
 
 class PeerStatus(Enum):
-    ALIVE: "alive"
-    SILENT: "silent"
-    MISSING_ACK: "missing_ack"
+    ALIVE = "alive"
+    SILENT = "silent"
+    MISSING_ACK = "missing_ack"
 
 class Peer:
     """ Used to maintain peer instances and peer information """
@@ -18,11 +19,37 @@ class Peer:
         self.timer = threading.Timer(5*60, self.setNotActive).start()
         self.status = PeerStatus.ALIVE
         self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.ackTimer = None
+        self.retrys = 0
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         if senderAddress == '':
             self.from_registry = True
         else:
             self.from_registry = False
+
+    def startAckTimer(self, resendMessage):
+        self.ackTimer = threading.Timer(10, self.resendAck, [resendMessage]).start()
+
+    def resendAck(self, resendMessage):
+        """ Resends a message to a peer if ack was not received within a time period """
+        self.retrys += 1
+
+        # Set peer to silent
+        if self.retrys > 3:
+            self.status = PeerStatus.SILENT
+            if self.ackTimer is not None:
+                self.ackTimer.cancel()
+            return
+
+        # Resend message
+        address = self.peer.split(':')
+        self.socket.sendto(bytes(resendMessage, "utf-8"), (f'{address[0]}', int(address[1])))
+
+    def cancelAckTimer(self):
+        if self.ackTimer is not None:
+            self.ackTimer.cancel()
+        self.retrys = 0
 
     def setPeerStatus(self, status):
         """ Sets instance of peer's status parameter status """
@@ -31,6 +58,10 @@ class Peer:
     def setNotActive(self):
         """ Sets instance of peer's status to not active """
         self.status = PeerStatus.SILENT
+    
+    def setMessingAck(self):
+        """ Sets instance of peer's status to missing ack """
+        self.status = PeerStatus.MISSING_ACK
 
     def resetTimer(self):
         """ Resets peer activity timer  """
@@ -71,6 +102,17 @@ class GroupManager:
         self.mutex.acquire()
         self.__list.append(peer)
         self.mutex.release()
+
+    def received_ack(self, peerAddress):
+        for i in range(len(self.__list)):
+            if self.__list[i].peer == peerAddress:
+                self.__list[i].cancelAckTimer()
+
+    def awaitAcks(self, resendMessage):
+        """ Sets all peers to missing ack status and sets a timer on them for retying """
+        for peer in self.__list:
+            if peer.status != PeerStatus.SILENT:
+                peer.startAckTimer(resendMessage)
 
     def get_peers(self):
         """ Get a list of all connected peers """

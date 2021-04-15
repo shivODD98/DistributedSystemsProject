@@ -97,11 +97,12 @@ class Process:
         print("Report Request")
 
         report = ''
-        peers = self.group_manager.get_peers()
+
         # 1. Current list of peers
+        peers = self.group_manager.get_peers()
         report += f'{len(peers)}\n'
         for peer in peers:
-           report += f'{str(peer.peer)}\n'
+           report += f'{str(peer.peer)} {peer.status.value}\n'
 
         # 2. peer list sources
         report += f'1\n'
@@ -131,6 +132,13 @@ class Process:
         report += f'{len(snippets)}\n'
         for snippet in snippets:
             report += f'{snippet.timestamp} {snippet.snip_msg} {snippet.sender}\n'
+
+        # 6. all acks received
+        acks_received = self.snipManager.get_acks()
+        report += f'{len(acks_received)}\n'
+        for ack in acks_received:
+            reprot += f'{ack.peer} {ack.timestamp}\n'
+        
         # send report
         await self.communicator.writeMsg(report)
         print(report)
