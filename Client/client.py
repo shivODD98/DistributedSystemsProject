@@ -71,13 +71,13 @@ class Process:
     async def handleCodeRequest(self):
         print('Code Request')
         await self.communicator.writeMsg('py\n')
-        await self.communicator.writeFile('./Client/client.py')
-        await self.communicator.writeFile('./Client/GroupManager.py')
-        await self.communicator.writeFile('./Client/Communicator/GroupCommunicator.py')
-        await self.communicator.writeFile('./Client/Communicator/LogicalClock.py')
-        await self.communicator.writeFile('./Client/Communicator/PeerManagementThread.py')
-        await self.communicator.writeFile('./Client/Communicator/SnipManagementThread.py')
-        await self.communicator.writeFile('./Client/Communicator/SnipManager.py')
+        await self.communicator.writeFile('../Client/client.py')
+        await self.communicator.writeFile('../Client/GroupManager.py')
+        await self.communicator.writeFile('../Client/Communicator/GroupCommunicator.py')
+        await self.communicator.writeFile('../Client/Communicator/LogicalClock.py')
+        await self.communicator.writeFile('../Client/Communicator/PeerManagementThread.py')
+        await self.communicator.writeFile('../Client/Communicator/SnipManagementThread.py')
+        await self.communicator.writeFile('../Client/Communicator/SnipManager.py')
         await self.communicator.writeMsg('\n...\n')
 
     async def handleReceiveRequest(self):
@@ -196,5 +196,5 @@ class Process:
         # asyncio.run(self.run())
 
 
-process = Process('136.159.5.22', 55921)
+process = Process('136.159.5.22', 12955)
 process.start()

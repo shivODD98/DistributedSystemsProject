@@ -26,6 +26,10 @@ class SnipManager:
 
     def add(self, msg, timestamp, sender):
         """ Adds a new snip message to the list (Thread safe), updates logical clock and displays snip messages """
+        for snip in self.__message_list:
+            if snip.sender.split(':')[0] in sender and snip.timestamp == timestamp:
+                return
+
         self.clock.updateToValue(max(self.clock.getCounterValue(), int(timestamp)))
         snip = Snip(msg, timestamp, sender)
         self.__message_list.append(snip)
@@ -48,8 +52,9 @@ class SnipManager:
 
     def addCtchSnip(self, originalSender, timestamp, content):
         """ Checks is recieved snip message is a duplicate before adding to list of snips """
+        print('addCtchsnip', originalSender, timestamp, content)
         for snip in self.__message_list:
-            if snip.sender == originalSender and snip.timestamp == timestamp:
+            if snip.sender.split(':')[0] in originalSender and snip.timestamp == timestamp:
                 return
         self.add(content, timestamp, originalSender)
 
