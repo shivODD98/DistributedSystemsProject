@@ -1,0 +1,5 @@
+registry
+reports
+sourceCode
+*.log
+*log.lck
