@@ -71,13 +71,14 @@ class GroupCommunicator:
                     peerData = data[4:]
                     self.group_manager.add(peerData, sourcePeer)
                     self.group_manager.received_peer(peerData, sourcePeer)
-                    self.sendPeerAllSnips(self, addr)
+                    self.sendPeerAllSnips(addr)
 
                 elif 'kill' in data:
                     self.socket.close()
                     break
 
     def sendPeerAllSnips(self, addr):
+        """ Handles ctch message by sending approapiate peer all known snip messages """
         snippets = self.snipManager.get_msgs()
         for snip in snippets:
             self.socket.sendto(

@@ -47,6 +47,7 @@ class SnipManager:
         return acks
 
     def addCtchSnip(self, originalSender, timestamp, content):
+        """ Checks is recieved snip message is a duplicate before adding to list of snips """
         for snip in self.__message_list:
             if snip.sender == originalSender and snip.timestamp == timestamp:
                 return
